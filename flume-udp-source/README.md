@@ -1,6 +1,6 @@
 # Flume UDP/JSON Source
 
-## Compilation
+## Build
 1. Install Apache Maven - https://maven.apache.org/install.html
 2. Clone repository
      ```
@@ -10,13 +10,16 @@
      ```
      mvn clean package -e
      ```
-
-## Installation
+## Run
 1. Move created `.jar` file from `target/` to Flume's `lib/` directory
-2. Configure UDP source (see config/o2.conf)
+2. Configure UDP source - see [config/o2.conf](config/o2.conf)
     ```
     a1.sources = udp
     a1.sources.udp.type = ch.cern.alice.o2.flume.UDPSource
     a1.sources.udp.port = <port>
     ...
     ```
+3. Start Flume agent
+   ```
+   ./bin/flume-ng agent -n a1 -c conf -f conf/o2.conf
+   ```
