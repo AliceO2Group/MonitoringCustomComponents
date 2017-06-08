@@ -45,7 +45,7 @@ import java.io.IOException;
  */
 public class InfluxdbUDPSink extends AbstractSink implements Configurable {
 
-  private static final Logger LOG = Logger.getLogger(InfluxdbUDPSink.class);
+  private static final Logger logger = Logger.getLogger(InfluxdbUDPSink.class);
 
   /** Default InfluxDB host. */
   private String hostname;
@@ -70,13 +70,13 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
   //@Override
   public final void configure(final Context context) {
     hostname = context.getString("hostname", DEFAULT_HOSTNAME);
-    LOG.info("Read InfluxDB hostname from configuration : " + hostname);
+    logger.info("Read InfluxDB hostname from configuration : " + hostname);
     port = context.getInteger("port", DEFAULT_PORT);
-    LOG.info("Read InfluxDB port from configuration : " + port);
+    logger.info("Read InfluxDB port from configuration : " + port);
     try {
       address = InetAddress.getByName(hostname);
     } catch (IOException e) {
-      LOG.error("Error opening creation address. ", e);
+      logger.error("Error opening creation address. ", e);
     }
     if (this.sinkCounter == null) {
       this.sinkCounter = new SinkCounter(this.getName());
@@ -85,19 +85,19 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
     try {
       datagramSocket = new DatagramSocket();
     } catch (SocketException e) {
-      LOG.error("Error creating datasocket", e);
+      logger.error("Error creating datasocket", e);
     }
   }
 
   @Override
   public final void start() {
-    LOG.info("Starting InfluxDB UDP Sink");
+    logger.info("Starting InfluxDB UDP Sink");
     sinkCounter.start();
   }
 
   @Override
   public final void stop() {
-    LOG.info("Stopping InfluxDB UDP Sink");
+    logger.info("Stopping InfluxDB UDP Sink");
     sinkCounter.stop();
   }
 
@@ -124,20 +124,20 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
             sinkCounter.incrementEventDrainSuccessCount();
             //LOG.debug("Datagram sent");
           } catch (IOException e) {
-            LOG.error("Error send packet. ", e);
+            logger.error("Error send packet. ", e);
             status = Status.BACKOFF;
           }
         } else {
-          LOG.debug("eventBody == null");
+          logger.debug("eventBody == null");
         }
       } else {
         sinkCounter.incrementBatchEmptyCount();
         status = Status.BACKOFF;
-        LOG.debug("No data to send");
+        logger.debug("No data to send");
       }
       txn.commit();
     } catch (Exception e) {
-      LOG.error(e);
+      logger.error(e);
       txn.rollback();
       throw new EventDeliveryException("Failed to log event: " + event, e);
     } finally {
