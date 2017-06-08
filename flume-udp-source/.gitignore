@@ -70,3 +70,7 @@ local.properties
  
 # PDT-specific
 .buildpath
+
+# Eclipse Settings
+.prefs
+
