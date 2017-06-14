@@ -30,7 +30,7 @@
 	
     # Sinks
     agent.sinks = sink_influxdb
-    agent.sinks.sink_influxdb.type = ch.cern.alice.o2.flume.InfluxdbUDPSink
+    agent.sinks.sink_influxdb.type = ch.cern.alice.o2.flume.InfluxDbUdpSink
     agent.sinks.sink_influxdb.channel = channel_mem
     agent.sinks.sink_influxdb.hostname = <ip>
     agent.sinks.sink_influxdb.port = <port>
