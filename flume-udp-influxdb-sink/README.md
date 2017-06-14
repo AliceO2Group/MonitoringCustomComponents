@@ -6,7 +6,7 @@
 2) Clone repository
 
 ```
-     git clone https://github.com/AliceO2Group/MonitroingCustomComponents.git && cd flume-udp-influxdb-sink
+     git clone https://github.com/AliceO2Group/MonitoringCustomComponents.git && cd MonitoringCustomComponents/flume-udp-influxdb-sink
 ```
 3) Compile
 ```
