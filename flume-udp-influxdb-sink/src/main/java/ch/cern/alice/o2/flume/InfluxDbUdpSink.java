@@ -34,30 +34,30 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.io.IOException;
 
-
 /**
- * Implementation of an HTTP sink. Events are POSTed to an HTTP / HTTPS
- * endpoint. The error handling behaviour is configurable, and can respond
- * differently depending on the response status returned by the endpoint.
- *
- * Rollback of the Flume transaction, and backoff can be specified globally,
- * then overridden for ranges (or individual) status codes.
+ * Apache flume InfluxDB UDP Sink
+ * It allows to send line protocol format events to an instance on 
+ * InfluxDB via UDP. 
+ * @author Gioacchino Vino
  */
-public class InfluxdbUDPSink extends AbstractSink implements Configurable {
 
-  private static final Logger logger = Logger.getLogger(InfluxdbUDPSink.class);
-
-  /** Default InfluxDB host. */
-  private String hostname;
+public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   
-  /** Default InfluxDB port. */
-  private int port;
+  
+  /** Flume logger */
+  private static final Logger logger = Logger.getLogger(InfluxDbUdpSink.class);
+
+  /** InfluxDB hostname. */
+  private String hostname;
   
   /** Default InfluxDB Hostname */
   private static final String DEFAULT_HOSTNAME = new String("localhost");
   
+  /** InfluxDB port. */
+  private int port;
+  
   /** Default InfluxDB port */
-  private static final int DEFAULT_PORT = 8086;
+  private static final int DEFAULT_PORT = 8089;
   
   /** Endpoint URL to POST events to. */
   private InetAddress address;
@@ -65,14 +65,19 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
   /** Counter used to monitor event throughput. */
   private SinkCounter sinkCounter;
   
+  /** class used to send UDP packet  */
   private DatagramSocket datagramSocket;
+  
+  /**
+   * Import configuration parameter from the configuration file 
+   */
   
   //@Override
   public final void configure(final Context context) {
     hostname = context.getString("hostname", DEFAULT_HOSTNAME);
-    logger.info("Read InfluxDB hostname from configuration : " + hostname);
+    logger.info("Read InfluxDB UDP hostname from configuration : " + hostname);
     port = context.getInteger("port", DEFAULT_PORT);
-    logger.info("Read InfluxDB port from configuration : " + port);
+    logger.info("Read InfluxDB UDP port from configuration : " + port);
     try {
       address = InetAddress.getByName(hostname);
     } catch (IOException e) {
@@ -88,19 +93,27 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
       logger.error("Error creating datasocket", e);
     }
   }
-
+  
+  /**
+   * Initialization step: start the sinkcounter used for 
+   * statistical and monitoring purpose
+   */
   @Override
   public final void start() {
     logger.info("Starting InfluxDB UDP Sink");
     sinkCounter.start();
   }
 
+  /**
+   * Closing step: stop the sinkcounter used for 
+   * statistical and monitoring purpose
+   */
   @Override
   public final void stop() {
     logger.info("Stopping InfluxDB UDP Sink");
     sinkCounter.stop();
   }
-
+  
   //@Override
   public final Status process() throws EventDeliveryException {
     Status status = Status.READY;
@@ -113,7 +126,6 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
       txn.begin();
       event = ch.take();
       if (event != null) {
-        //LOG.info("UDP InfluxDB Sink Event: " + EventHelper.dumpEvent(event, 100));
         eventBody = event.getBody();
         if (eventBody != null && eventBody.length > 0) {
           sinkCounter.incrementBatchCompleteCount();
@@ -122,7 +134,6 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
           try {
             datagramSocket.send(packet);
             sinkCounter.incrementEventDrainSuccessCount();
-            //LOG.debug("Datagram sent");
           } catch (IOException e) {
             logger.error("Error send packet. ", e);
             status = Status.BACKOFF;
@@ -133,7 +144,7 @@ public class InfluxdbUDPSink extends AbstractSink implements Configurable {
       } else {
         sinkCounter.incrementBatchEmptyCount();
         status = Status.BACKOFF;
-        logger.debug("No data to send");
+        logger.debug("No events extracted from channel");
       }
       txn.commit();
     } catch (Exception e) {

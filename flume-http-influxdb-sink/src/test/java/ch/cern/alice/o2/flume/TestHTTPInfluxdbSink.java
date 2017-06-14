@@ -14,74 +14,72 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
-import java.io.IOException;
+import java.io.*;
+import java.net.*;
 
 import com.google.common.base.Charsets;
 
-public class TestInfluxdbUDPSink {
+public class TestHTTPInfluxdbSink {
   private static final Logger logger = LoggerFactory
-      .getLogger(TestInfluxdbUDPSink.class);
+      .getLogger(TestHTTPInfluxdbSink.class);
   
-  private static final String hostname = "127.0.0.1";
-  private static final Integer port = 25639;
+  private static final String  hostname = "127.0.0.1";
+  private static final Integer port = 12346;
+  private static final String  database = "mydb";
+  private static final Integer batchSize = 1000;
   
-  private InfluxDbUdpSink sink;
+  private InfluxDbHttpSink sink;
   private Channel channel;
   
   public void setUp() {
-    sink = new InfluxDbUdpSink();
+    sink = new InfluxDbHttpSink();
     channel = new MemoryChannel();
     Context sink_context = new Context();
     Context channel_context = new Context();
     sink_context.put("hostname", hostname);
     sink_context.put("port", String.valueOf(port));
+    sink_context.put("database", database);
+    sink_context.put("batchSize", String.valueOf(batchSize));
     sink.setChannel(channel);
     Configurables.configure(sink, sink_context);
     Configurables.configure(channel, channel_context);
   }
   
   @Test
-  public void testReceivePacket() throws SocketException, EventDeliveryException {
+  public void testReceivePacket() throws EventDeliveryException, IOException {
     setUp();
-    DatagramSocket serverSocket = new DatagramSocket(port);
-    byte[] receiveData = new byte[1024];
-    DatagramPacket receivePacket = new DatagramPacket(receiveData,
-                       receiveData.length);
-    
+    ServerSocket serverSocket = new ServerSocket(port);
+    String line = null;
+    String temp = null;
     String eventBody = new String(
         "meas,tag1=key1 value=100i 1234567890");
     Event event = EventBuilder.withBody( eventBody, Charsets.UTF_8);
-    
     sink.start();
     Transaction transaction = channel.getTransaction();
     transaction.begin();
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
       channel.put(event);
     }
     transaction.commit();
     transaction.close();
 
-    for (int i = 0; i < 10; i++) {
-      //logger.info("ITERATION: " + i);
-      Sink.Status status = sink.process();
-      Assert.assertEquals(Sink.Status.READY, status);
-      try {
-        serverSocket.receive(receivePacket);
-        String body = new String( receivePacket.getData(), 0,
-                           receivePacket.getLength() );
-        //System.out.println(body + "\n");
-        Assert.assertEquals(eventBody, body);
-      } catch (IOException e) {
-        System.out.println(e);
-      }
-      
+    Sink.Status status = sink.process();
+    String body = null;
+    Assert.assertEquals(Sink.Status.BACKOFF, status);
+    try {
+      Socket clientSocket = serverSocket.accept();
+      BufferedReader in = new BufferedReader (
+          new InputStreamReader(clientSocket.getInputStream()));
+      while ((line = in.readLine()) != null) {
+        temp = line;
     }
-    Assert.assertEquals(Sink.Status.BACKOFF, sink.process());
-    
+      Assert.assertEquals(eventBody, temp);
+    } catch (IOException e) {
+      System.out.println(e);
+    }
+      
     sink.stop();
     serverSocket.close();
   }
 }
+

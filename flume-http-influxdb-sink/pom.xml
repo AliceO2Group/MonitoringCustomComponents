@@ -3,10 +3,10 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>ch.cern.alice.o2.flume</groupId>
-  <artifactId>flume-udp-influxdb-sink</artifactId>
+  <artifactId>flume-http-influxdb-sink</artifactId>
   <packaging>jar</packaging>
   <version>1.0-beta</version>
-  <name>flume-udp-influxdb-sink</name>
+  <name>flume-http-influxdb-sink</name>
   <url>http://maven.apache.org</url>
   
   <properties>
