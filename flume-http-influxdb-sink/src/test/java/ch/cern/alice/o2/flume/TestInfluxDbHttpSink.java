@@ -19,6 +19,11 @@ import java.net.*;
 
 import com.google.common.base.Charsets;
 
+
+/**
+ * Code to test Apache flume InfluxDB HTTP Sink
+ * @author Gioacchino Vino
+ */
 public class TestInfluxDbHttpSink {
   private static final Logger logger = LoggerFactory
       .getLogger(TestInfluxDbHttpSink.class);
@@ -31,6 +36,9 @@ public class TestInfluxDbHttpSink {
   private InfluxDbHttpSink sink;
   private Channel channel;
   
+  /**
+   * Configure the channel and the sink for the test
+   */
   public void setUp() {
     sink = new InfluxDbHttpSink();
     channel = new MemoryChannel();
@@ -45,6 +53,11 @@ public class TestInfluxDbHttpSink {
     Configurables.configure(channel, channel_context);
   }
   
+  /**
+   * Check whether the event sent using the sink is egual to that received 
+   * @throws EventDeliveryException
+   * @throws IOException
+   */
   @Test
   public void testReceivePacket() throws EventDeliveryException, IOException {
     setUp();
@@ -64,7 +77,6 @@ public class TestInfluxDbHttpSink {
     transaction.close();
 
     Sink.Status status = sink.process();
-    String body = null;
     Assert.assertEquals(Sink.Status.BACKOFF, status);
     try {
       Socket clientSocket = serverSocket.accept();

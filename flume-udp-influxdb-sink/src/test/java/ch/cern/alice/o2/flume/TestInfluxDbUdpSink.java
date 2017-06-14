@@ -21,16 +21,22 @@ import java.io.IOException;
 
 import com.google.common.base.Charsets;
 
+/**
+ * Code to test Apache flume InfluxDB UDP Sink
+ * @author Gioacchino Vino
+ */
+
+
 public class TestInfluxDbUdpSink {
-  private static final Logger logger = LoggerFactory
-      .getLogger(TestInfluxDbUdpSink.class);
-  
   private static final String hostname = "127.0.0.1";
   private static final Integer port = 25639;
   
   private InfluxDbUdpSink sink;
   private Channel channel;
   
+  /**
+   * Configure the channel and the sink for the test
+   */
   public void setUp() {
     sink = new InfluxDbUdpSink();
     channel = new MemoryChannel();
@@ -42,7 +48,12 @@ public class TestInfluxDbUdpSink {
     Configurables.configure(sink, sink_context);
     Configurables.configure(channel, channel_context);
   }
-  
+ 
+  /**
+   * Check whether the event sent using the sink is egual to that received 
+   * @throws SocketException
+   * @throws EventDeliveryException
+   */
   @Test
   public void testReceivePacket() throws SocketException, EventDeliveryException {
     setUp();
