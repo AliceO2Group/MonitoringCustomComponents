@@ -21,9 +21,9 @@ import java.io.IOException;
 
 import com.google.common.base.Charsets;
 
-public class TestInfluxdbUDPSink {
+public class TestInfluxDbUdpSink {
   private static final Logger logger = LoggerFactory
-      .getLogger(TestInfluxdbUDPSink.class);
+      .getLogger(TestInfluxDbUdpSink.class);
   
   private static final String hostname = "127.0.0.1";
   private static final Integer port = 25639;

@@ -19,9 +19,9 @@ import java.net.*;
 
 import com.google.common.base.Charsets;
 
-public class TestHTTPInfluxdbSink {
+public class TestInfluxDbHttpSink {
   private static final Logger logger = LoggerFactory
-      .getLogger(TestHTTPInfluxdbSink.class);
+      .getLogger(TestInfluxDbHttpSink.class);
   
   private static final String  hostname = "127.0.0.1";
   private static final Integer port = 12346;
