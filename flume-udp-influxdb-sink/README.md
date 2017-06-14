@@ -20,20 +20,20 @@
 ```
     # Sources
     agent.sources = my_source
-	agent.sources.my_source.channels = channel_mem
+    agent.sources.my_source.channels = channel_mem
 	
-	# Channels
-	agent.channels = channel_mem
-	agent.channels.channel_mem.type = memory
-	agent.channels.channel_mem.capacity = 1000
-	agent.channels.channel_mem.transactionCapacity = 1000
+    # Channels
+    agent.channels = channel_mem
+    agent.channels.channel_mem.type = memory
+    agent.channels.channel_mem.capacity = 1000
+    agent.channels.channel_mem.transactionCapacity = 1000
 	
-	# Sinks
-	agent.sinks = sink_influxdb
-	agent.sinks.sink_influxdb.type = ch.cern.alice.o2.flume.InfluxdbUDPSink
-	agent.sinks.sink_influxdb.channel = channel_mem
-	agent.sinks.sink_influxdb.hostname = <ip>
-	agent.sinks.sink_influxdb.port = <port>
+    # Sinks
+    agent.sinks = sink_influxdb
+    agent.sinks.sink_influxdb.type = ch.cern.alice.o2.flume.InfluxdbUDPSink
+    agent.sinks.sink_influxdb.channel = channel_mem
+    agent.sinks.sink_influxdb.hostname = <ip>
+    agent.sinks.sink_influxdb.port = <port>
 ```
 
 3) Start Flume agent
