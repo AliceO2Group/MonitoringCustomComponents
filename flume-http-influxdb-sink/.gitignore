@@ -1,8 +1,7 @@
- Directories #
+rectories #
 /build/
 /bin/
-/target/
-/app/
+target/
  
 # OS Files #
 .DS_Store
@@ -73,4 +72,3 @@ local.properties
 
 # Eclipse Settings
 .prefs
-
