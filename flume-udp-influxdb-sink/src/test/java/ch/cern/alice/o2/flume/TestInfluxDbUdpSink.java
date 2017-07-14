@@ -5,6 +5,7 @@ import org.apache.flume.channel.MemoryChannel;
 import org.apache.flume.conf.Configurables;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
+import org.apache.flume.event.SimpleEvent;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.event.EventBuilder;
 import org.apache.flume.Sink;
@@ -18,6 +19,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.io.IOException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.common.base.Charsets;
 
@@ -62,10 +66,13 @@ public class TestInfluxDbUdpSink {
     DatagramPacket receivePacket = new DatagramPacket(receiveData,
                        receiveData.length);
     
-    String eventBody = new String(
-        "meas,tag1=key1 value=100i 1234567890");
-    Event event = EventBuilder.withBody( eventBody, Charsets.UTF_8);
-    
+    Event event = new SimpleEvent();
+    Map<String,String> headers = new HashMap<String, String>();
+    headers.put("name", "testMetric");
+    headers.put("value", "120");
+    headers.put("hostname", "testhostname.cern.ch");
+    headers.put("timestamp", "1500036047850741446");
+    event.setHeaders(headers);
     sink.start();
     Transaction transaction = channel.getTransaction();
     transaction.begin();
@@ -76,15 +83,14 @@ public class TestInfluxDbUdpSink {
     transaction.close();
 
     for (int i = 0; i < 10; i++) {
-      //logger.info("ITERATION: " + i);
       Sink.Status status = sink.process();
       Assert.assertEquals(Sink.Status.READY, status);
       try {
         serverSocket.receive(receivePacket);
-        String body = new String( receivePacket.getData(), 0,
+        String receivedFromSink = new String(receivePacket.getData(), 0,
                            receivePacket.getLength() );
-        //System.out.println(body + "\n");
-        Assert.assertEquals(eventBody, body);
+        String expected = new String("testMetric,hostname=testhostname.cern.ch value=120 1500036047850741446");
+        Assert.assertEquals(receivedFromSink, expected);
       } catch (IOException e) {
         System.out.println(e);
       }
