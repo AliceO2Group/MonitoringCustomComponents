@@ -34,6 +34,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.io.IOException;
 
+import java.util.Map;
+import java.util.HashMap;
+
 /**
  * Apache flume InfluxDB UDP Sink
  * It allows to send line protocol format events to an instance on 
@@ -117,7 +120,7 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   //@Override
   public final Status process() throws EventDeliveryException {
     Status status = Status.READY;
-    byte[] eventBody = null;
+    Map<String,String> headers = new HashMap<String, String>();
     Event event = null;
     Channel ch = getChannel();
     Transaction txn = ch.getTransaction();
@@ -126,11 +129,13 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
       txn.begin();
       event = ch.take();
       if (event != null) {
-        eventBody = event.getBody();
-        if (eventBody != null && eventBody.length > 0) {
+        headers = event.getHeaders();
+        if (headers.containsKey("name") && headers.containsKey("value")) {
+          String influxMessage = "%s,hostname=%s value=%s %s"; 
+          String boundParams = String.format(influxMessage, headers.get("name"), headers.get("hostname"), headers.get("value"), headers.get("timestamp"));
           sinkCounter.incrementBatchCompleteCount();
           DatagramPacket packet = new DatagramPacket(
-              eventBody, eventBody.length, address, port);
+              boundParams.getBytes(), boundParams.length(), address, port);
           try {
             datagramSocket.send(packet);
             sinkCounter.incrementEventDrainSuccessCount();
@@ -139,7 +144,7 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
             status = Status.BACKOFF;
           }
         } else {
-          logger.debug("eventBody == null");
+          logger.debug("Invalid metric: missing name and value");
         }
       } else {
         sinkCounter.incrementBatchEmptyCount();
