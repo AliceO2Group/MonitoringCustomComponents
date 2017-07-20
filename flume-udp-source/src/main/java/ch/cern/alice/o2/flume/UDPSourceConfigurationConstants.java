@@ -51,6 +51,18 @@ public final class UDPSourceConfigurationConstants {
    */
   public static final Integer DEFAULT_MAXSIZE   = 1 << 16;
 
+  /**
+   * Metric output mode name
+   */
+  public static final String  CONFIG_MODE    = "mode";
+
+  /**
+   * Metric output mode default value
+   * "pass" mode indicates that receive messages is passed to Flume body
+   */
+  public static final String  DEFAULT_MODE   = "event";
+
+
   private UDPSourceConfigurationConstants() {
     // Disable explicit creation of objects.
   }

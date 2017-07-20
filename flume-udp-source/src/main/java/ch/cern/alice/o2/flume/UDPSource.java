@@ -27,6 +27,7 @@ import org.apache.flume.Context;
 import org.apache.flume.CounterGroup;
 import org.apache.flume.Event;
 import org.apache.flume.event.SimpleEvent;
+import org.apache.flume.event.EventBuilder;
 import org.apache.flume.EventDrivenSource;
 import org.apache.flume.FlumeException;
 import org.apache.flume.conf.Configurable;
@@ -90,6 +91,14 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
   private int maxSize;
 
   /**
+   * Output mode:
+   *  - event - create Flume event based on JSON formatted message
+   *  - pass  - pass to Flume event body filed
+   * (Can be set via Flume agent configuration file or UDPSourceConfigurationConstants class)
+   */
+  private String mode;
+
+  /**
    * Netty UDP channel
    */
   private DatagramChannel nettyChannel;
@@ -125,7 +134,7 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
     nettyChannel = (DatagramChannel)serverBootstrap.bind(new InetSocketAddress(host, port));
 
     super.start();
-    logger.info("UDP/JSON Source started");
+    logger.info("UDP/JSON Source started, mode: " + mode);
   }
 
   @Override
@@ -159,6 +168,9 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
 
     maxSize = context.getInteger(UDPSourceConfigurationConstants.CONFIG_MAXSIZE,
       UDPSourceConfigurationConstants.DEFAULT_MAXSIZE);
+
+    mode = context.getString(UDPSourceConfigurationConstants.CONFIG_MODE,
+      UDPSourceConfigurationConstants.DEFAULT_MODE);
   }
 
   /**
@@ -213,7 +225,13 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
             baos.write(b);
           }
         }
-        e = buildEvent();
+        if (mode.equals("event")) {
+          e = buildEvent();
+        } else if (mode.equals("pass")) {
+          e = passAsBody();
+        } else {
+          throw new Exception("Wrong output mode");
+        }
       } catch (Exception ex) {
         // clear buffer for the next event
         baos.reset();
@@ -222,6 +240,16 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
         // no-op
       }
       return e;
+    }
+
+    /**
+    * Passes recevied message into Flume body
+    */
+    Event passAsBody() {
+      byte[] body;
+      body = baos.toByteArray();
+      baos.reset();
+      return EventBuilder.withBody(body);
     }
 
     /**
