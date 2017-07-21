@@ -23,7 +23,7 @@
 | *type*         | -       | Must be set to `ch.cern.alice.o2.flume.InfluxDbUdpSink` |
 | *hostname*     | -       | InfluxDB hostname |
 | *port*         | -       | InfluxDB UDP port number |
-| mode           | event   | Output mode: `event` or `pass` |
+| mode           | pass    | Output mode: `event` or `pass` |
 
 *Example:*
  ~~~
