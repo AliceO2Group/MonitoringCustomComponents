@@ -34,6 +34,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.io.IOException;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Apache flume InfluxDB UDP Sink
  * It allows to send line protocol format events to an instance on 
@@ -58,6 +61,12 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   
   /** Default InfluxDB port */
   private static final int DEFAULT_PORT = 8089;
+
+  /** Input data mode: event, pass */
+  private boolean passThrough;
+
+  /** Default input data mode */
+  private static final String DEFAULT_MODE = new String("pass");
   
   /** Endpoint URL to POST events to. */
   private InetAddress address;
@@ -75,9 +84,7 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   //@Override
   public final void configure(final Context context) {
     hostname = context.getString("hostname", DEFAULT_HOSTNAME);
-    logger.info("Read InfluxDB UDP hostname from configuration : " + hostname);
     port = context.getInteger("port", DEFAULT_PORT);
-    logger.info("Read InfluxDB UDP port from configuration : " + port);
     try {
       address = InetAddress.getByName(hostname);
     } catch (IOException e) {
@@ -86,11 +93,18 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
     if (this.sinkCounter == null) {
       this.sinkCounter = new SinkCounter(this.getName());
     }
-    
+
     try {
       datagramSocket = new DatagramSocket();
     } catch (SocketException e) {
-      logger.error("Error creating datasocket", e);
+      logger.error("Error while creating UDP socket", e);
+    }
+    String mode = context.getString("mode", DEFAULT_MODE);
+    passThrough = true;
+    if (mode.equals("event")) {
+      passThrough = false;
+    } else if (!mode.equals("pass")) {
+      logger.error("Wrong input mode, fallback to pass mode");
     }
   }
   
@@ -100,8 +114,8 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
    */
   @Override
   public final void start() {
-    logger.info("Starting InfluxDB UDP Sink");
     sinkCounter.start();
+    logger.info("InfluxDB/UDP Sink started " + hostname + ":" + port);
   }
 
   /**
@@ -116,44 +130,58 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   
   //@Override
   public final Status process() throws EventDeliveryException {
-    Status status = Status.READY;
-    byte[] eventBody = null;
-    Event event = null;
+    Status status = null;
+    DatagramPacket packet = null;
     Channel ch = getChannel();
     Transaction txn = ch.getTransaction();
-    
+    txn.begin();
     try {
-      txn.begin();
-      event = ch.take();
-      if (event != null) {
-        eventBody = event.getBody();
-        if (eventBody != null && eventBody.length > 0) {
-          sinkCounter.incrementBatchCompleteCount();
-          DatagramPacket packet = new DatagramPacket(
-              eventBody, eventBody.length, address, port);
-          try {
-            datagramSocket.send(packet);
-            sinkCounter.incrementEventDrainSuccessCount();
-          } catch (IOException e) {
-            logger.error("Error send packet. ", e);
-            status = Status.BACKOFF;
-          }
-        } else {
-          logger.debug("eventBody == null");
-        }
-      } else {
+      Event event = ch.take();
+      if (event == null) {
         sinkCounter.incrementBatchEmptyCount();
-        status = Status.BACKOFF;
-        logger.debug("No events extracted from channel");
+        txn.commit();
+        return Status.BACKOFF;
+        
       }
+      sinkCounter.incrementBatchCompleteCount();
+      if (passThrough) {
+        packet = passFromBody(event);
+      } else {
+        packet = createFromEvent(event);
+      }
+      datagramSocket.send(packet);
+      sinkCounter.incrementEventDrainSuccessCount();
       txn.commit();
+      status = Status.READY;
     } catch (Exception e) {
       logger.error(e);
       txn.rollback();
-      throw new EventDeliveryException("Failed to log event: " + event, e);
+      status = Status.BACKOFF;
+      throw new EventDeliveryException("Failed to log event", e);
     } finally {
       txn.close();
     }
     return status;
+  }
+
+  private final DatagramPacket createFromEvent(Event event) throws EventDeliveryException {
+    Map<String,String> headers = new HashMap<String, String>();
+    headers = event.getHeaders();
+    if (!headers.containsKey("name") && !headers.containsKey("value")) {
+      throw new EventDeliveryException("Header does not contain name and value fields");
+    }
+    String influxMessage = "%s,hostname=%s value=%s %s";
+    String boundParams = String.format(influxMessage,
+      headers.get("name"), headers.get("hostname"), headers.get("value"), headers.get("timestamp")
+    );
+    return new DatagramPacket(boundParams.getBytes(), boundParams.length(), address, port);
+  }
+
+  private final DatagramPacket passFromBody(Event event) throws EventDeliveryException {
+    byte[] eventBody = event.getBody();
+    if (eventBody == null && eventBody.length < 1) {
+      throw new EventDeliveryException("Fume Event body empty");
+    }
+    return new DatagramPacket(eventBody, eventBody.length, address, port);
   }
 }
