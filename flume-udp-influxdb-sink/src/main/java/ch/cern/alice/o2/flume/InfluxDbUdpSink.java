@@ -63,7 +63,7 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   private static final int DEFAULT_PORT = 8089;
 
   /** Input data mode: event, pass */
-  private String mode;
+  private boolean passThrough;
 
   /** Default input data mode */
   private static final String DEFAULT_MODE = new String("pass");
@@ -85,7 +85,6 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   public final void configure(final Context context) {
     hostname = context.getString("hostname", DEFAULT_HOSTNAME);
     port = context.getInteger("port", DEFAULT_PORT);
-    mode = context.getString("mode", DEFAULT_MODE);
     try {
       address = InetAddress.getByName(hostname);
     } catch (IOException e) {
@@ -100,6 +99,13 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
     } catch (SocketException e) {
       logger.error("Error while creating UDP socket", e);
     }
+    String mode = context.getString("mode", DEFAULT_MODE);
+    passThrough = true;
+    if (mode.equals("event")) {
+      passThrough = false;
+    } else if (!mode.equals("pass")) {
+      logger.error("Wrong input mode, fallback to pass mode");
+    }
   }
   
   /**
@@ -109,7 +115,7 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   @Override
   public final void start() {
     sinkCounter.start();
-    logger.info("InfluxDB/UDP Sink started " + hostname + ":" + port + ", mode: " + mode);
+    logger.info("InfluxDB/UDP Sink started " + hostname + ":" + port);
   }
 
   /**
@@ -138,12 +144,10 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
         
       }
       sinkCounter.incrementBatchCompleteCount();
-      if (mode.equals("event")) {
-        packet = createFromEvent(event);
-      } else if (mode.equals("pass")) {
+      if (passThrough) {
         packet = passFromBody(event);
       } else {
-         throw new EventDeliveryException("Wrong input mode");
+        packet = createFromEvent(event);
       }
       datagramSocket.send(packet);
       sinkCounter.incrementEventDrainSuccessCount();
