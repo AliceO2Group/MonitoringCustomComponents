@@ -182,7 +182,6 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
     if (eventBody == null && eventBody.length < 1) {
       throw new EventDeliveryException("Fume Event body empty");
     }
-    sinkCounter.incrementBatchCompleteCount();
     return new DatagramPacket(eventBody, eventBody.length, address, port);
   }
 }
