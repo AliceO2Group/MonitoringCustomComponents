@@ -91,12 +91,10 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
   private int maxSize;
 
   /**
-   * Output mode:
-   *  - event - create Flume event based on JSON formatted message
-   *  - pass  - pass to Flume event body filed
-   * (Can be set via Flume agent configuration file or UDPSourceConfigurationConstants class)
+   * State whether metric should be pass through into Flume's event body (mode pass)
+   * or parsed into Flume event header fields (mode event)
    */
-  private String mode;
+  private boolean passThrough;
 
   /**
    * Netty UDP channel
@@ -134,7 +132,7 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
     nettyChannel = (DatagramChannel)serverBootstrap.bind(new InetSocketAddress(host, port));
 
     super.start();
-    logger.info("UDP/JSON Source started, mode: " + mode);
+    logger.info("UDP/JSON Source started " + host + ":" + port);
   }
 
   @Override
@@ -169,8 +167,14 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
     maxSize = context.getInteger(UDPSourceConfigurationConstants.CONFIG_MAXSIZE,
       UDPSourceConfigurationConstants.DEFAULT_MAXSIZE);
 
-    mode = context.getString(UDPSourceConfigurationConstants.CONFIG_MODE,
+    String mode = context.getString(UDPSourceConfigurationConstants.CONFIG_MODE,
       UDPSourceConfigurationConstants.DEFAULT_MODE);
+    passThrough = true;
+    if (mode.equals("event")) {
+      passThrough = false;
+    } else if (!mode.equals("pass")) {
+      logger.error("Wrong input mode, fallback to pass mode");
+    }
   }
 
   /**
@@ -225,12 +229,10 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
             baos.write(b);
           }
         }
-        if (mode.equals("event")) {
-          e = buildEvent();
-        } else if (mode.equals("pass")) {
+        if (passThrough) {
           e = passAsBody();
         } else {
-          throw new Exception("Wrong output mode");
+          e = buildEvent();
         }
       } catch (Exception ex) {
         // clear buffer for the next event
