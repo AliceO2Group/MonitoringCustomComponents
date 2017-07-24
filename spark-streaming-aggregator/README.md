@@ -4,7 +4,7 @@
 1. Install Apache Maven - https://maven.apache.org/install.html
 2. Clone repository
  ~~~
- git clone https://github.com/AliceO2Group/MonitroingCustomComponents.git && cd spark-streaming-aggregator  
+ git clone https://github.com/AliceO2Group/MonitoringCustomComponents.git && cd spark-streaming-aggregator  
  ~~~
 3. Compile
  ~~~
