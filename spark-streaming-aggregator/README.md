@@ -12,7 +12,7 @@
  ~~~
 ## Run
 1. Move created `.jar` file from `target/` to Spark's `jars/` directory
-2. Configure a Flume agent having a Avro Sink (see [config/flume_agent_example.conf](config/flume_agent_example.conf))
+2. Configure a Flume agent having a Avro Sink 
 
 *Example:*
  ~~~
@@ -27,7 +27,7 @@ agent.sinks.avro_sink.type = avro
 agent.sinks.avro_sink.channel = channel_mem
 agent.sinks.avro_sink.hostname = 127.0.0.1
 agent.sinks.avro_sink.port = 1234
-```
+
  ~~~
 3. Submit the Spark Streaming Job
  ~~~
