@@ -37,7 +37,12 @@
 The following counters are available:
 + `EventAcceptedCount` - number of successfully received and parsed metrics
 
-To enable monitoring counters and publish them via HTTP server following parameters needs to be added to start command:
+To enable monitoring counters and publish them via HTTP following parameters needs to be added to start up command:
 ~~~
 -Dflume.monitoring.type=http -Dflume.monitoring.port=<port>
+~~~
+
+Counters are published at the following URL:
+~~~
+http://<host>:<port>/metrics
 ~~~
