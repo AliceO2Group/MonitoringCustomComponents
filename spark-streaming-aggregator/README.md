@@ -31,6 +31,8 @@ agent.sinks.avro_sink.port = <receiver_port>
  ~~~
 3. Submit the Spark Streaming Job
  ~~~
- $SPARK_HOME/bin/spark-submit --class ch.cern.alice.o2.spark.streaming.SparkStreamingAggregator --master local[*] $SPARK_HOME/jars/spark-streaming-aggregator-1.0-SNAPSHOT.jar <receiver_host> <receiver_port> <db_host> <db_port>
+ $SPARK_HOME/bin/spark-submit --class ch.cern.alice.o2.spark.streaming.SparkStreamingAggregator \
+  --master local[*] $SPARK_HOME/jars/spark-streaming-aggregator-1.0-SNAPSHOT.jar \ 
+  <receiver_host> <receiver_port> <db_host> <db_port>
 
  ~~~
