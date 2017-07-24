@@ -32,3 +32,12 @@
  ~~~
  ./bin/flume-ng agent -n a1 -c conf -f conf/o2.conf
  ~~~
+
+## Monitoring
+The following counters are available:
++ `EventAcceptedCount` - number of successfully received and parsed metrics
+
+To enable monitoring counters and publish them via HTTP server following parameters needs to be added to start command:
+~~~
+-Dflume.monitoring.type=http -Dflume.monitoring.port=<port>
+~~~

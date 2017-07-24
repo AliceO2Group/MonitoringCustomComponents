@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.flume.ChannelException;
 import org.apache.flume.Context;
-import org.apache.flume.CounterGroup;
+import org.apache.flume.instrumentation.SourceCounter;
 import org.apache.flume.Event;
 import org.apache.flume.event.SimpleEvent;
 import org.apache.flume.event.EventBuilder;
@@ -107,13 +107,15 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
   private static final Logger logger = LoggerFactory.getLogger(UDPSource.class);
 
   /**
-   * Counts collected/dropped metrics
+   * Counts received metrics
    */
-  private CounterGroup counterGroup = new CounterGroup();
+  private SourceCounter sourceCounter;
 
   @Override
   public void start() {
     // setup Netty server
+    sourceCounter.start();
+
     DatagramChannelFactory datagramChannelFactory =
       new OioDatagramChannelFactory(Executors.newCachedThreadPool());
 
@@ -138,6 +140,7 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
   @Override
   public void stop() {
     logger.info("UDP/JSON Source stopping...");
+    sourceCounter.stop();
     if (nettyChannel != null) {
       nettyChannel.close();
       try {
@@ -154,6 +157,8 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
 
   @Override
   public void configure(Context context) {
+    sourceCounter = new SourceCounter(this.getName());
+
     Configurables.ensureRequiredNonNull(context, UDPSourceConfigurationConstants.CONFIG_PORT);
 
     host = context.getString(UDPSourceConfigurationConstants.CONFIG_HOST,
@@ -169,6 +174,7 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
 
     String mode = context.getString(UDPSourceConfigurationConstants.CONFIG_MODE,
       UDPSourceConfigurationConstants.DEFAULT_MODE);
+
     passThrough = true;
     if (mode.equals("event")) {
       passThrough = false;
@@ -200,10 +206,9 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
         if (e == null) {
           return;
         }
+        sourceCounter.incrementEventAcceptedCount();
         getChannelProcessor().processEvent(e);
-        counterGroup.incrementAndGet("events.collected");
       } catch (ChannelException ex) {
-        counterGroup.incrementAndGet("events.dropped");
         logger.error("Error writting to channel", ex);
         return;
       }
