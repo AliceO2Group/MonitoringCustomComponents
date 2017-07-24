@@ -33,7 +33,7 @@
  ./bin/flume-ng agent -n a1 -c conf -f conf/o2.conf
  ~~~
 
-## Monitoring
+## Counters
 The following counters are available:
 + `EventAcceptedCount` - number of successfully received and parsed metrics
 
