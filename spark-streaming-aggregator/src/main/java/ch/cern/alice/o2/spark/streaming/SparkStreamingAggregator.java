@@ -30,17 +30,17 @@ import java.io.IOException;
  *  This sent the average value to a InfluxDB instance using the UDP protocol and line 
  *  protocol format. 
  *
- *  Usage: SparkStreamingAggregator <receive_host> <receive_port> <db_host> <db_port>
- *    <receive_host> is the host the Flume receiver will be started on - a receiver
+ *  Usage: SparkStreamingAggregator <receiver_host> <receiver_port> <db_host> <db_port>
+ *    <receiver_host> is the host the Flume receiver will be started on - a receiver
  *           creates a server and listens for flume events.
- *    <receive_port> is the port the Flume receiver will listen on.
+ *    <receiver_port> is the port the Flume receiver will listen on.
  *    <db_host> is the host of the InfluxDB instance where to sent UPD packets in line protocol format
  *    <db_port> is the port of the InfluxDB instance where to sent UPD Packets.
  *
  *  To run this example:
  *    `./bin/spark-submit --class ch.cern.alice.o2.spark.streaming.SparkStreamingAggregator \
  *                       --master local[*] /local/spark/jars/spark-streaming-aggregator-1.0-SNAPSHOT.jar \
- *                       <receive_host> <receive_port> <db_host> <db_port>`
+ *                       <receiver_host> <receiver_port> <db_host> <db_port>`
  * 
  *  @author Gioacchino Vino
  */
