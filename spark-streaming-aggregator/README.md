@@ -39,7 +39,7 @@ agent.sinks.avro_sink.port = <receiver_port>
 - `spark-streaming-flume-assembly_2.11-2.2.0.jar`
 - `spark-streaming-flume_2.11-2.2.0.jar`
 
-They could be downloaded from Maven Repository - https://search.maven.org/#search%7Cga%7C1%7Cspark%20flume
+They could be downloaded from [here](https://search.maven.org/#search%7Cga%7C1%7Cspark%20flume)
 
 4. Submit the Spark Streaming Job
  ~~~
