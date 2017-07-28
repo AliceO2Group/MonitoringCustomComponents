@@ -10,7 +10,7 @@
  ~~~
 3) Compile
  ~~~
- mvn clean -e install
+ mvn clean -e install -DskipTests
  ~~~
 
 ## Run
@@ -21,7 +21,7 @@
 | Property name  | Default | Description |
 | -------------- | ------- | ----------- |
 | *type*         | -       | Must be set to `ch.cern.alice.o2.flume.InfluxDbTimestampInterceptor$Builder` |
-| *timestampTag* | timestamp | Tag name to add |
+| *timestampTag* | timestamp | Tag name |
 
 *Example:*
  ~~~
@@ -39,6 +39,7 @@
  	
  # Sinks
  agent.sinks = avro
+ agent.sinks.avro.channel = channel_mem
  ~~~
 
 3) Start Flume agent
