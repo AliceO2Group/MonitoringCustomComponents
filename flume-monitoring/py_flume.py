@@ -2,7 +2,6 @@
 
 from sys import exit, argv
 from time import time
-import os
 import logging
 import argparse
 import json
@@ -24,11 +23,12 @@ flume_hosts = [{"host": "localhost:5653", "name":"o2_influxdbsinkflume"}]
 # ARGUMENT PARSER
 parser = argparse.ArgumentParser()
 parser.add_argument('-ll','--level-log', help='Level Logger: %s'%level_log, default='INFO',dest='levellog', choices=level_log)
+parser.add_argument('-a','--agents', help='List of Flume Agent <host1>:<port1>|<name1>,<host2>:<port2>|<name2>', default='',dest='agentlist')
 args = parser.parse_args()
 #===============================================================================
 
 #===============================================================================
-# LOG FILE CONFIGURATION
+# CONFIGURATIONs
 try:
   logger = logging.getLogger('')
 except:
@@ -59,6 +59,43 @@ elif 'CRITICAL' == args.levellog:
 else:
   logger.setLevel(logging.INFO)
 
+lAgents = list()
+sAgents = args.agentlist
+splitted_sAgents = sAgents.split(',')
+if len(splitted_sAgents) > 0:
+  for agent_name in splitted_sAgents:
+    if '=' in agent_name: 
+      lAgent_name = agent_name.split('=')
+      if len(lAgent_name) == 2:
+        host_port,name = agent_name.split('=')
+        if ':' in host_port: 
+          lHostPort = host_port.split(':')
+          if len(lHostPort) == 2:
+            host, port = lHostPort
+            try:
+              int_port = int(port)
+              if int_port > 0 and int_port < 65536:
+                lAgents.append({"host":host_port,"name":name})
+              else:
+                print "port {} must be in the interval 0-65536. EXIT".format(int_port)
+                exit(0) 
+            except:
+              print "port {} must be an integer".format(port)
+              exit(0) 
+          else:
+            print "{} not well written".format(host_port)
+        else:
+          print "{} without separator   ':'".format(host_port)
+          exit(0)
+      else:
+         print "{} not well written".format(agent_name)
+    else:
+      print "agent name {} without separator '='".format(agent_name)
+      exit(0) 
+else:
+  print "No agents. Exit"
+  exit(0)  
+
 #===============================================================================
 # FLUME GATHERING SECTION
 logger.info("START")
@@ -80,7 +117,8 @@ hdr = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:54.0) Gecko/201
        'Upgrade-Insecure-Requests' : '1',
        'Connection': 'keep-alive'}
 hdr = {'User-Agent': 'Mozilla/5.0'}
-for host in flume_hosts:
+for host in lAgents:
+  print host
   try:
     url = "http://{}/metrics".format(host["host"])
     req = urllib2.Request(url, headers=hdr) 
@@ -99,8 +137,8 @@ for host in flume_hosts:
       dMeas["tags"] = dict()
       dMeas["time"] = timestamp_ns
       dMeas["fields"] = dict()
-      dMeas["fields"]["hostname"] = host["name"]
-      dMeas["tags"]["hostname"] = host["name"]
+      dMeas["fields"]["agentname"] = host["name"]
+      dMeas["tags"]["agentname"] = host["name"]
       dMeas["tags"]["host"] = host["host"]
       dMeas["tags"]["component"] = item
       for key in result[item].keys():
