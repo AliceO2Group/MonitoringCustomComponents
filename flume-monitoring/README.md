@@ -24,7 +24,7 @@ Configure Telegraf in order to execute the bash script
 3. Configure getFlumeMonitoringData.sh
 
 
-Add multiple flume agent adding copple `<host>`:`<name>` separated with comma `','` 
+Add multiple flume agent adding pair `<host>`:`<name>` separated with comma `','` in the bash script
 
 *Example:*
 
