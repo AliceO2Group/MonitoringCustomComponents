@@ -36,6 +36,9 @@ import java.io.IOException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Apache flume InfluxDB UDP Sink
@@ -74,6 +77,30 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   /** Counter used to monitor event throughput. */
   private SinkCounter sinkCounter;
   
+  /** Prefix of 'tag' fields in flume event */
+  private String tagPrefix = new String("tag_");
+  
+  /** Prefix of 'field' fields in flume event */
+  private String valuePrefix = new String("value_");
+  
+  /** 'measurement' field in flume event */
+  private String measField = new String("name");
+  
+  /** 'timestamp' field in flume event */
+  private String timestampField= new String("timestamp");
+  
+  /** Prefix of 'field' fields in flume event */
+  private int tagPrefixLenght = tagPrefix.length();
+  
+  /** Prefix of 'field' fields in flume event */
+  private int valuePrefixLenght = valuePrefix.length();
+  
+  /** Prefix of 'field' fields in flume event */
+  private int minPrefixLenght = 0;
+  
+  /** UnixTimestamp of 01/01/2018 */
+  private long min_timestamp= 1514764800000000000L;
+  
   /** class used to send UDP packet  */
   private DatagramSocket datagramSocket;
   
@@ -106,6 +133,11 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
     } else if (!mode.equals("pass")) {
       logger.error("Wrong input mode, fallback to pass mode");
     }
+    
+    if( tagPrefixLenght <= valuePrefixLenght ) 
+      minPrefixLenght = tagPrefixLenght;
+    else 
+      minPrefixLenght = valuePrefixLenght;
   }
   
   /**
@@ -141,16 +173,19 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
         sinkCounter.incrementBatchEmptyCount();
         txn.commit();
         return Status.BACKOFF;
-        
       }
       sinkCounter.incrementBatchCompleteCount();
-      if (passThrough) {
-        packet = passFromBody(event);
-      } else {
-        packet = createFromEvent(event);
+      try {
+        if (passThrough) {
+          packet = passFromBody(event);
+        } else {
+          packet = createFromEvent(event);
+        }
+        datagramSocket.send(packet);
+        sinkCounter.incrementEventDrainSuccessCount();
+      } catch (EventDeliveryException ex) {
+        logger.error(ex);
       }
-      datagramSocket.send(packet);
-      sinkCounter.incrementEventDrainSuccessCount();
       txn.commit();
       status = Status.READY;
     } catch (Exception e) {
@@ -159,22 +194,80 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
       status = Status.BACKOFF;
       throw new EventDeliveryException("Failed to log event", e);
     } finally {
+      //txn.commit();
       txn.close();
     }
     return status;
   }
-
+  
+  
+  private final String parseValue( String value){
+    String strEncodedValue = new String();
+    try{
+      Integer.valueOf(value);
+      strEncodedValue = value + "i";
+    } catch (NumberFormatException ex_int) {
+      try {
+        Float.parseFloat(value);
+        strEncodedValue = value;
+      } catch (NumberFormatException ex_float) {
+        strEncodedValue = "\""+value+"\"";
+      }
+    }
+    return strEncodedValue;
+  }
+  
   private final DatagramPacket createFromEvent(Event event) throws EventDeliveryException {
     Map<String,String> headers = new HashMap<String, String>();
+    List<String> tags = new ArrayList<String>(); 
+    List<String> values = new ArrayList<String>();
+    Long timestamp = 0L;
     headers = event.getHeaders();
-    if (!headers.containsKey("name") && !headers.containsKey("value")) {
-      throw new EventDeliveryException("Header does not contain name and value fields");
+    logger.debug("Headers:" + headers.toString());
+    if(!headers.containsKey(measField)) {
+      throw new EventDeliveryException("Header does not contain name field");
     }
-    String influxMessage = "%s,hostname=%s value=%s %s";
-    String boundParams = String.format(influxMessage,
-      headers.get("name"), headers.get("hostname"), headers.get("value"), headers.get("timestamp")
-    );
-    return new DatagramPacket(boundParams.getBytes(), boundParams.length(), address, port);
+    if(headers.containsKey(timestampField)) {
+      try{
+        timestamp = Long.parseLong(headers.get(timestampField));
+        if( timestamp < min_timestamp){
+          throw new EventDeliveryException("timestamp must be in nanoseconds");
+        }
+      } catch (NumberFormatException ex){
+        throw new EventDeliveryException("timestamp field is not long type");  
+      }
+    }
+    for(String strKey : headers.keySet()) {
+      if(strKey.length() > minPrefixLenght ){
+        if( strKey.substring(0, tagPrefixLenght).contains(tagPrefix)){
+          tags.add(strKey);
+        } else {
+          if( strKey.substring(0, valuePrefixLenght).contains(valuePrefix)){
+            values.add(strKey);
+          } 
+        }
+      }
+    }
+    if(values.isEmpty()) {
+      throw new EventDeliveryException("Header does not contain any value fields");
+    }
+    String influxMessage = headers.get(measField);
+    if(!tags.isEmpty()){
+      for( String tagKey : tags){
+        influxMessage += ","+tagKey.substring(tagPrefixLenght)+"="+headers.get(tagKey);
+      }
+    }
+    String [] arrayValues = new String[values.size()];
+    arrayValues = values.toArray(arrayValues);
+    influxMessage += " "+arrayValues[0].substring(valuePrefixLenght)+"="+parseValue(headers.get(arrayValues[0]));
+    for( int ii = 1; ii < values.size(); ii++){
+      influxMessage += ","+arrayValues[ii].substring(valuePrefixLenght)+"="+parseValue(headers.get(arrayValues[ii]));
+    }
+    if( timestamp != 0L){
+      influxMessage += " "+headers.get("timestamp");
+    }
+    logger.debug("InfluxdbLineProtocol: "+influxMessage);
+    return new DatagramPacket(influxMessage.getBytes(), influxMessage.length(), address, port);
   }
 
   private final DatagramPacket passFromBody(Event event) throws EventDeliveryException {
