@@ -50,3 +50,37 @@
  ~~~
  $FLUME_HOME/bin/flume-ng agent --conf-file $FLUME_HOME/conf/o2.conf --name agent --conf $FLUME_HOME/conf/
  ~~~
+
+## Event format
+If `event` is selected, the metric information must be present entirely in the event header. The event body is not read.
+Some fields must be present to validate the event
+Headers:
+
+| Key            | Description |
+| -------------- | ----------- |
+| *name*         | metric name |
+| *value_\**     | At least one value field whose name start with `value_`. Example `value_reads` |
+
+
+Optional fields
+
+| Key            | Description |
+| -------------- | ----------- |
+| *tag_\**       | Tags can be added using field whose name start with `tag_`. Example `tag_host` |
+| timestamp      | UnixTimestamp format in nanoseconds: Example: 1519751192000000000 |
+
+
+Example:
+
+| Key                | Description |
+| ------------------ | ----------- |
+| name               | cpu         |
+| tag_host           | host1       |
+| tag_cpu            | cpu1        |
+| value_usage_idle   | 0.98        |
+| value_usage_system | 0.01        |
+| value_usage_user   | 0.01        |
+| timestamp          | 1519751192000000000 |
+
+
+Key Name different from which showed won't be sent to InfluxDB
