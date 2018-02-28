@@ -52,23 +52,23 @@
  ~~~
 
 ## Event format
-If `event` is selected, the metric information must be present entirely in the event header. The event body is not read.
-Some fields must be present to validate the event
-Headers:
+If `event` mode is selected, the metric information must be present entirely in the event headers. The event body won't be read.
+Two keys are necessary:
 
 | Key            | Description |
 | -------------- | ----------- |
 | *name*         | metric name |
-| *value_\**     | At least one value field whose name start with `value_`. Example `value_reads` |
+| *value_\**     | At least one value field whose name starts with `value_`. Example `value_reads` |
 
 
-Optional fields
+Optional fields:
 
 | Key            | Description |
 | -------------- | ----------- |
 | *tag_\**       | Tags can be added using field whose name start with `tag_`. Example `tag_host` |
 | timestamp      | UnixTimestamp format in nanoseconds: Example: 1519751192000000000 |
 
+Key names not complaint with those described won't be sent to InfluxDB.
 
 Example:
 
@@ -82,5 +82,8 @@ Example:
 | value_usage_user   | 0.01        |
 | timestamp          | 1519751192000000000 |
 
+Line protocol sent to Influxdb:
+```
+cpu,host=host1,cpu=cpu1 usage_idle=0.98,usage_system=0.01,usage_user=0.01 1519751192000000000
+```
 
-Key Name different from which showed won't be sent to InfluxDB
