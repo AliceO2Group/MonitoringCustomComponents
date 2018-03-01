@@ -36,7 +36,6 @@ import java.io.IOException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -44,6 +43,22 @@ import java.util.ArrayList;
  * Apache flume InfluxDB UDP Sink
  * It allows to send line protocol format events to an instance on 
  * InfluxDB via UDP. 
+ * 
+ * Two modes could be selected:
+ *  - pass: the component excepts to find in the event body the InfluxDB Line Protocol. 
+ *          It parse the body as a string and sent it to InfluxDB instance without any check.
+ *  - event: the component excepts to find in the event headers data to sent to the InfluxDB instance.
+ *           It parse the headers, check them and convert them to the InfluxDB Line Procotol.
+ *           The header must have, at least, the name and the value fields. Since the component is able to
+ *           sent multiple values in a single packet, in order to discern multiple value fields from others
+ *           the "value_" prefix must be used, e.g. "value_usage_idle", "value_bytesread".
+ *           The name field represents the metric name and the required field name is "name". 
+ *           Optionally could be used the tags and timestamp fields.
+ *           "timestamp" field must be represented in nano-second unit.
+ *           Tag fields must be have the "tag_" prefix in order to be detected from the component.
+ *           E.g. "tag_host", "tag_nic", "tag_datacenter"
+ *           All fields not beloning to those won't be sent to the InfluxDB instance.  
+ * 
  * @author Gioacchino Vino
  */
 
@@ -98,8 +113,8 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   /** Prefix of 'field' fields in flume event */
   private int minPrefixLenght = 0;
   
-  /** UnixTimestamp of 01/01/2018 */
-  private long min_timestamp= 1514764800000000000L;
+  /** UnixTimestamp of 01/01/2018 in nano-seconds*/
+  private long minTimestampNs= 1514764800000000000L;
   
   /** class used to send UDP packet  */
   private DatagramSocket datagramSocket;
@@ -230,11 +245,11 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
     if(headers.containsKey(timestampField)) {
       try{
         timestamp = Long.parseLong(headers.get(timestampField));
-        if( timestamp < min_timestamp){
-          throw new EventDeliveryException("timestamp must be in nanoseconds");
+        if( timestamp < minTimestampNs){
+          throw new EventDeliveryException("Timestamp must be in nanoseconds");
         }
       } catch (NumberFormatException ex){
-        throw new EventDeliveryException("timestamp field is not long type");  
+        throw new EventDeliveryException("Timestamp field is not long type");  
       }
     }
     for(String strKey : headers.keySet()) {
@@ -254,19 +269,19 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
     String influxMessage = headers.get(measField);
     if(!tags.isEmpty()){
       for( String tagKey : tags){
-        influxMessage += ","+tagKey.substring(tagPrefixLenght)+"="+headers.get(tagKey);
+        influxMessage += "," + tagKey.substring(tagPrefixLenght) + "=" + headers.get(tagKey);
       }
     }
     String [] arrayValues = new String[values.size()];
     arrayValues = values.toArray(arrayValues);
-    influxMessage += " "+arrayValues[0].substring(valuePrefixLenght)+"="+parseValue(headers.get(arrayValues[0]));
+    influxMessage += " " + arrayValues[0].substring(valuePrefixLenght) + "=" + parseValue(headers.get(arrayValues[0]));
     for( int ii = 1; ii < values.size(); ii++){
-      influxMessage += ","+arrayValues[ii].substring(valuePrefixLenght)+"="+parseValue(headers.get(arrayValues[ii]));
+      influxMessage += "," + arrayValues[ii].substring(valuePrefixLenght) + "=" + parseValue(headers.get(arrayValues[ii]));
     }
     if( timestamp != 0L){
-      influxMessage += " "+headers.get("timestamp");
+      influxMessage += " " + headers.get("timestamp");
     }
-    logger.debug("InfluxdbLineProtocol: "+influxMessage);
+    logger.debug("InfluxdbLineProtocol: " + influxMessage);
     return new DatagramPacket(influxMessage.getBytes(), influxMessage.length(), address, port);
   }
 
