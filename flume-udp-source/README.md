@@ -18,7 +18,6 @@
 | -------------- | ------- | ----------- |
 | *type*         | -       | Must be set to `ch.cern.alice.o2.flume.UDPSource` |
 | *port*         | -       | UDP port number |
-| mode           | event   | Output mode: `event` or `pass` |
 
 
 *Example:*
@@ -26,7 +25,6 @@
  a1.sources = udp
  a1.sources.udp.type = ch.cern.alice.o2.flume.UDPSource
  a1.sources.udp.port = 1234
- a1.sources.udp.mode = event
  ~~~
 3. Start Flume agent
  ~~~
