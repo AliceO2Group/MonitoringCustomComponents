@@ -219,13 +219,13 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
   private final String parseValue( String value){
     String strEncodedValue = new String();
     try{
-      Integer.valueOf(value);
+      Long.valueOf(value);
       strEncodedValue = value + "i";
-    } catch (NumberFormatException ex_int) {
+    } catch (NumberFormatException ex_long) {
       try {
-        Float.parseFloat(value);
+        Double.parseDouble(value);
         strEncodedValue = value;
-      } catch (NumberFormatException ex_float) {
+      } catch (NumberFormatException ex_double) {
         strEncodedValue = "\""+value+"\"";
       }
     }
@@ -238,7 +238,7 @@ public class InfluxDbUdpSink extends AbstractSink implements Configurable {
     List<String> values = new ArrayList<String>();
     Long timestamp = 0L;
     headers = event.getHeaders();
-    logger.debug("Headers:" + headers.toString());
+    logger.debug("Event Headers:" + headers.toString());
     if(!headers.containsKey(measField)) {
       throw new EventDeliveryException("Header does not contain name field");
     }
