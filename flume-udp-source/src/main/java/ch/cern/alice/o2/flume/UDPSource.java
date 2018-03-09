@@ -91,12 +91,6 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
   private int maxSize;
 
   /**
-   * State whether metric should be pass through into Flume's event body (mode pass)
-   * or parsed into Flume event header fields (mode event)
-   */
-  private boolean passThrough;
-
-  /**
    * Netty UDP channel
    */
   private DatagramChannel nettyChannel;
@@ -171,16 +165,6 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
 
     maxSize = context.getInteger(UDPSourceConfigurationConstants.CONFIG_MAXSIZE,
       UDPSourceConfigurationConstants.DEFAULT_MAXSIZE);
-
-    String mode = context.getString(UDPSourceConfigurationConstants.CONFIG_MODE,
-      UDPSourceConfigurationConstants.DEFAULT_MODE);
-
-    passThrough = true;
-    if (mode.equals("event")) {
-      passThrough = false;
-    } else if (!mode.equals("pass")) {
-      logger.error("Wrong input mode, fallback to pass mode");
-    }
   }
 
   /**
@@ -202,16 +186,11 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent mEvent) {
       try {
-        Event e = extractEvent((ChannelBuffer)mEvent.getMessage());
-        if (e == null) {
-          return;
-        }
-        sourceCounter.incrementEventAcceptedCount();
-        getChannelProcessor().processEvent(e);
+        extractEvent((ChannelBuffer)mEvent.getMessage());
       } catch (ChannelException ex) {
         logger.error("Error writting to channel", ex);
-        return;
       }
+      return;
     }
 
     /**
@@ -229,15 +208,14 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
           byte b = in.readByte();
           // stop reading if end of line
           if (b == delimiter) {
-            break;
+            if ((e = buildEvent()) == null) {
+              break;
+            }
+            sourceCounter.incrementEventAcceptedCount();
+            getChannelProcessor().processEvent(e);
           } else {
             baos.write(b);
           }
-        }
-        if (passThrough) {
-          e = passAsBody();
-        } else {
-          e = buildEvent();
         }
       } catch (Exception ex) {
         // clear buffer for the next event
@@ -247,16 +225,6 @@ public class UDPSource extends AbstractSource implements EventDrivenSource, Conf
         // no-op
       }
       return e;
-    }
-
-    /**
-    * Passes recevied message into Flume body
-    */
-    Event passAsBody() {
-      byte[] body;
-      body = baos.toByteArray();
-      baos.reset();
-      return EventBuilder.withBody(body);
     }
 
     /**
