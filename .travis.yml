@@ -8,3 +8,6 @@ script:
 - cd flume-udp-source; mvn clean package -e
 - cd spark-streaming-aggregator; mvn clean -e install -DskipTests
 - cd park-streaming-pass-through; mvn clean -e install -DskipTests
+
+notifications:
+  email: false
