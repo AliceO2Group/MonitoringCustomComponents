@@ -61,12 +61,14 @@ This component version has been tested with Apache flume 1.8.0
 A single JSON Collectd metric has this structure:
 
 ~~~
-{"values":24125440,24576],"dstypes":"derive","derive"],"dsnames":"read","write"],"time":1520605461.795,"interval":10.000,
-"host":"aido2ssd.cern.ch","plugin":"disk","plugin_instance":"dev_sda1","type":"disk_octets","type_instance":""}
+{"values":24125440,24576],"dstypes":"derive","derive"],"dsnames":"read","write"],"time":1520605461.795,
+"interval":10.000,"host":"aido2ssd.cern.ch","plugin":"disk","plugin_instance":"dev_sda1",
+"type":"disk_octets","type_instance":""}
 ~~~
 
 The Handler converts it in a Flume event having this structure:
 
 ~~~
-{tag_instance=dev_sda1, tag_type=disk_octets, value_value=24125440, name=disk_read, type_value=long, tag_host=aido2ssd.cern.ch, timestamp=1520605477199675392}
+{tag_instance=dev_sda1, tag_type=disk_octets, value_value=24125440, name=disk_read, type_value=long, 
+tag_host=aido2ssd.cern.ch, timestamp=1520605477199675392}
 ~~~
