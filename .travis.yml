@@ -1,0 +1,10 @@
+language: java
+sudo: false
+
+script:
+- cd flume-http-influxdb-sink; mvn clean -e install
+- cd flume-influxdb-timestamp-interceptor; mvn clean -e install -DskipTests
+- cd flume-udp-influxdb-sink; mvn clean -e install
+- cd flume-udp-source; mvn clean package -e
+- cd spark-streaming-aggregator; mvn clean -e install -DskipTests
+- cd park-streaming-pass-through; mvn clean -e install -DskipTests
