@@ -139,18 +139,18 @@ public class JSONCollectdHTTPHandler implements HTTPSourceHandler {
 	    			  if( !sValue.isEmpty() || sValue != null) {
 	    				  Map<String, String> eventHeader = new HashMap<String, String>();
 	    				  if( !sPluginInstance.isEmpty() && sPluginInstance != null) 
-	    	    			  eventHeader.put(EVENT_KEY_PLUGIN_INSTANCE, sPluginInstance);
-	    	    		  if( !sType.isEmpty() && sType != null) 
-	    	    			  eventHeader.put(EVENT_KEY_TYPE, sType);
-	    	    		  if( !sTypeInstance.isEmpty() && sTypeInstance != null) 
-	    	    			  eventHeader.put(EVENT_KEY_TYPE_INSTANCE, sTypeInstance);
-	    	    		  if( !sTimestamp.isEmpty() && sTimestamp != null) 
-	    	    			  eventHeader.put(EVENT_KEY_TIMESTAMP, sTimestamp);
-	    	    		  eventHeader.put(EVENT_KEY_HOST, sHost);
-						  eventHeader.put(EVENT_KEY_VALUE, sValue);
-						  eventHeader.put(EVENT_KEY_NAME, sPlugin+EVENT_KEY_SEPARATOR+siName);
-						  eventHeader.put(EVENT_KEY_VALUETYPE, sLocalType);
-						  Event event = new SimpleEvent();
+	    	    			  	eventHeader.put(EVENT_KEY_PLUGIN_INSTANCE, sPluginInstance);
+	    	    		          if( !sType.isEmpty() && sType != null) 
+	    	    			    	eventHeader.put(EVENT_KEY_TYPE, sType);
+	    	    		  	  if( !sTypeInstance.isEmpty() && sTypeInstance != null) 
+	    	    			  	eventHeader.put(EVENT_KEY_TYPE_INSTANCE, sTypeInstance);
+	    	    		  	  if( !sTimestamp.isEmpty() && sTimestamp != null) 
+	    	    			  	eventHeader.put(EVENT_KEY_TIMESTAMP, sTimestamp);
+	    	    		  	  eventHeader.put(EVENT_KEY_HOST, sHost);
+					  eventHeader.put(EVENT_KEY_VALUE, sValue);
+					  eventHeader.put(EVENT_KEY_NAME, sPlugin+EVENT_KEY_SEPARATOR+siName);
+					  eventHeader.put(EVENT_KEY_VALUETYPE, sLocalType);
+					  Event event = new SimpleEvent();
 			    		  event.setHeaders(eventHeader);
 			    		  LOG.debug("Event: " + event);
 						  if(event != null) 
