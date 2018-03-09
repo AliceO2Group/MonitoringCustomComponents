@@ -3,6 +3,7 @@ This repository consists of custom components to Monitoring tools: [Apache Flume
 
 ## List of components
 + [flume-influxdb-timestamp-interceptor](flume-influxdb-timestamp-interceptor)
++ [flume-json-collectd-http-handler](flume-json-collectd-http-handler)
 + [flume-http-influxdb-sink](flume-http-influxdb-sink)
 + [flume-udp-influxdb-sink](flume-udp-influxdb-sink)
 + [flume-udp-source](flume-udp-source)
