@@ -1,15 +1,15 @@
 # Flume UDP/JSON Source
 
 ## Build
-1. Install Apache Maven - https://maven.apache.org/install.html
-2. Clone repository
+1. Clone repository
  ~~~
  git clone https://github.com/AliceO2Group/MonitroingCustomComponents.git && cd flume-udp-source
  ~~~
-3. Compile
+2. Compile
  ~~~
  mvn clean package -e
  ~~~
+
 ## Run
 1. Move created `.jar` file from `target/` to Flume's `lib/` directory
 2. Configure UDP source (see [config/o2.conf](config/o2.conf))
