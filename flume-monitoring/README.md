@@ -18,8 +18,8 @@ Configure Telegraf in order to execute the bash script
     commands = [ "/path/to/getFlumeMonitoringData.sh" ]
 ~~~
 
-3. Configure getFlumeMonitoringData.sh
-Add multiple Flume agent adding pair `<hostname>`:`<agentName>` separa`ted with comma `','` in the bash script
+3. Run getFlumeMonitoringData.sh
+Pass as parameter `<hostname>`:`<port>`=<agentName>` for each agent. To define multiple agents use `,` as separator.
 
 *Example:*
 ~~~
