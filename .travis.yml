@@ -2,12 +2,12 @@ language: java
 sudo: false
 
 script:
-- cd flume-http-influxdb-sink; mvn clean -e install -DskipTests=true
-- cd flume-influxdb-timestamp-interceptor; mvn clean -e install -DskipTests=true
-- cd flume-udp-influxdb-sink; mvn clean -e install -DskipTests=true
-- cd flume-udp-source; mvn clean package -e -DskipTests=true
-- cd spark-streaming-aggregator; mvn clean -e install -DskipTests
-- cd park-streaming-pass-through; mvn clean -e install -DskipTests
-
+- cd ${TRAVIS_BUILD_DIR}/flume-http-influxdb-sink; mvn clean -e install -DskipTests
+- cd ${TRAVIS_BUILD_DIR}/flume-influxdb-timestamp-interceptor; mvn clean -e install -DskipTests
+- cd ${TRAVIS_BUILD_DIR}/flume-udp-influxdb-sink; mvn clean -e install -DskipTests
+- cd ${TRAVIS_BUILD_DIR}/flume-udp-source; mvn clean package -e -DskipTests
+- cd ${TRAVIS_BUILD_DIR}/spark-streaming-aggregator; mvn clean -e install -DskipTests
+- cd ${TRAVIS_BUILD_DIR}/spark-streaming-pass-through; mvn clean -e install -DskipTests
+- cd ${TRAVIS_BUILD_DIR}/flume-json-collectd-http-handler; mvn clean -e install -DskipTests
 notifications:
   email: false
