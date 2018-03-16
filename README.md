@@ -9,7 +9,8 @@ In order to build a component Java and Apache Maven is required.
 brew install maven
 ```
 
-#### CC7 (and other Linux distributions)
+#### CentOS 7
+1. `yum install java`
 1. Go to [Apache Maven download page](https://maven.apache.org/download.cgi)
 2. Download binary archive (eg. [apache-maven-3.5.3-bin.tar.gz](http://www-eu.apache.org/dist/maven/maven-3/3.5.3/binaries/apache-maven-3.5.3-bin.tar.gz))
 3. Unarchive and add `bin` directory to `$PATH`
