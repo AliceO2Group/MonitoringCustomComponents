@@ -6,7 +6,7 @@ Executing the script in Telegraf, it acts like a plug-in to monitor Flume agents
 
 ## Configure
 
-1. Run the flume agent(s) with `-Dflume.monitoring.type` and `-Dflume.monitoring.port` options.
+1. Run the flume agent(s) with `-Dflume.monitoring.type` and `-Dflume.monitoring.port` options in order to export the monitoring data related to that component.
 
 
 *Example:*
@@ -23,16 +23,14 @@ Configure Telegraf in order to execute the bash script
 ~~~
 3. Configure getFlumeMonitoringData.sh
 
+The script is able to monitor multiple flume agents by reading the monitoring data exported from each component on `<host:port>`.
 
-Add multiple flume agent adding pair `<host>`:`<name>` separated with comma `','` in the bash script
+There is the possibility to assign to the flume agent a custom name using the `<agent_name>` field.
+
+Multiple flume agents can be monitored providing a comma seratated list, as shown in the example
 
 *Example:*
 
 ~~~
-host1=<host1>:<port1>
-name1=<agent1_name>
-host2=<host2>:<port2>
-name2=<agent2_name>
-
-python $SCRIPTPATH/py_flume.py --agents "$host1=$name1,$host2=$name2"
+python $SCRIPTPATH/py_flume.py --agents "host1:post1=name1,host2:port2=name2"
 ~~~
