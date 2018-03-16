@@ -2,6 +2,6 @@ language: java
 sudo: false
 
 script:
-- for D in `find . -type d`; do cd ${D}; mvn clean -e install -DskipTests=true; done
+- for D in `find . -mindepth 1 -maxdepth 1 -type d -not -path '*/\.*'`; do cd ${D}; mvn clean -e install -DskipTests=true; done
 notifications:
   email: false
