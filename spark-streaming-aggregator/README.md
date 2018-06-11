@@ -36,18 +36,25 @@ This component computes aggregations of values coming from [Flume Avro Sink](htt
 
 *Example:*
 ```
-agent.sources = my_source my_source1
-agent.sources.my_source.channels = channel_mem
+agent.sources = my_source1 my_source2
+agent.sources.my_source1.channels = channel_mem1
+agent.sources.my_source2.channels = channel_mem2
 
-agent.channels = channel_mem
-agent.channels.channel_mem.type = memory
+agent.channels = channel_mem1 channel_mem2
+agent.channels.channel_mem1.type = memory
+agent.channels.channel_mem2.type = memory
 
-agent.sinks = avro_sink
+agent.sinks = avro_sink 
 agent.sinks.avro_sink.type = avro
 agent.sinks.avro_sink.channel = channel_mem
-agent.sinks.avro_sink.hostname = <receiver_host>
-agent.sinks.avro_sink.port = <receiver_port>
+agent.sinks.avro_sink.hostname = <rcv_hostname>
+agent.sinks.avro_sink.port = <rcv_port>
 
+agent.sources.my_source2.type = ch.cern.alice.o2.flume.UDPSource
+agent.sources.my_source2.mode = event
+agent.sources.my_source2.port = <dst_port>
+
+...
 ```
 
 5. Submit the Spark Streaming job
@@ -68,7 +75,7 @@ general:
 
 input:
   bindaddress: 0.0.0.0
-  port: <input_port>
+  port: <rcv_port>
 
 output:
   hostname: <dst_hostname>
@@ -147,14 +154,15 @@ The input format MUST have the followings fields:
 All fields are strings.
 
 ## Output format
-The output format is that used selecting the *event mode* in the [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source)
+The output format is that used selecting the *event mode* in the [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source):
+
 
 ```JSON
 { "headers": 
   {
     "name": "<initial_metric_name>_aggr",
     "timestamp": "1528729384000000000",
-    "value_<used aggregation function>": "1251533299.265",
+    "value_<used_aggregation_function>": "1251533299.265",
     "tag_host": "o2.cern.ch",
     "tag_path": "/tmp",
     "type_value": "double"
@@ -176,3 +184,5 @@ For example:
   },
   "body" : ""
 }
+
+All fields are strings.
