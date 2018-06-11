@@ -126,7 +126,7 @@ Tab. 1
 Tab. 2
 
 |  Section  |  First Keyword   |  Second Keyword(s)   | Mandatory | Description |
-| ----------| -----------------| ------- | ----------- |
+| ----------| -----------------| ------- | ----------- |----------- |
 | *general* | -          | -  | Yes    | Define the start of 'general' configuration section |
 | *general* | *addname*  | -  |  Yes    | Name to assign to the aggregation job. Es: "SparkAggregationJob" |
 | *general* | *window*   | -  |  Yes    | Define the start of 'general' configuration section |
