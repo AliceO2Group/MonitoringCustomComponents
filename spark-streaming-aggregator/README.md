@@ -1,6 +1,6 @@
 # Spark Streaming aggregator
 
-This component computes aggregation of value coming from a [Flume Avro Sink](https://flume.apache.org/FlumeUserGuide.html#avro-sink) using one of the allowed aggregation functions and sends the results back to a [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source) using the *event mode* format.
+This component computes aggregations of values coming from [Flume Avro Sink](https://flume.apache.org/FlumeUserGuide.html#avro-sink) using one of the allowed aggregation functions and sends the results back to a [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source) using the *event mode* format.
 
 ## Dependencies
 - Spark > 2.2.0
@@ -32,7 +32,7 @@ This component computes aggregation of value coming from a [Flume Avro Sink](htt
 1. Move created `.jar` file from `target/` to Spark's `jars/` directory
 2. Download the jars listed in **Package Dependencies** and move them to the Spark's `jars/` directory
 3. Edit the YAML configuration file
-4. Configure a Flume Avro Sink to transmit values to Spark (the values MUST have the format described below)
+4. Configure a Flume Avro Sink to transmit values to Spark (the input values MUST have the format described below)
 
 *Example:*
 ```
@@ -92,13 +92,15 @@ aggr_functs:
       removetags: [ ] #in this case no tags will be removed and the aggregation will preserve all tags.
 ```
 
-The YAML configuration file MUST follow the following rules:
+The YAML configuration file MUST follow these rules:
 - The `general`, `input` and `output` sections are mandatory
 - The `aggr_functs` is optional even if this situation is useless
-- The sub keyword `default`, `avg`, `sum`, `max` and `min` are optional but if inserted a metricname/removetags list MUST be provided
+- The keywords `default`, `avg`, `sum`, `max` and `min` are optionals but if inserted, a metricname/removetags list MUST be provided
 - All key words ( `general`, `appname`, `input`, ...) MUST be lowercase
 - The `window` and `port` parameters MUST be integer
-- In the aggregation function section the `default` keyword is used to aggregate all metrics without the need to list all of them
+
+
+In the aggregation function section the `default` keyword is used to aggregate all metrics without the need to list all of them
 
 
 Tab. 1
@@ -115,25 +117,25 @@ Tab. 2
 
 |  Section  |  First Keyword   |  Second Keyword(s)   | Mandatory | Description |
 | ----------| -----------------| ------- | ----------- |----------- |
-| *general* | -          | -  | Yes    | Define the start of 'general' configuration section |
+| *general* | -          | -  | Yes    | Defines the start of 'general' configuration section |
 | *general* | *addname*  | -  |  Yes    | Name to assign to the aggregation job. Es: "SparkAggregationJob" |
-| *general* | *window*   | -  |  Yes    | Time window size, expressed in seconds |
-| *input*   | -          | -  |  Yes    | Define the start of 'input' configuration section and inner Avro Source related parameters must be inserted |
+| *general* | *window*   | -  |  Yes    | Time window size, in seconds |
+| *input*   | -          | -  |  Yes    | Defines the start of 'input' configuration section where the inner Avro Source parameters are defined |
 | *input*   | *bind*     | -  |  Yes    | Bind address. Es "0.0.0.0" |
 | *input*   | *port*     | -  |  Yes    | Port where to listen to |
-| *output*  | -          | -  |  Yes    | Define the start of 'output' configuration section and UDP transmission related parameters must be inserted |
-| *output*  | *hostname* | -  |  Yes    | Hostname where send data |
+| *output*  | -          | -  |  Yes    | Define the start of 'output' configuration section where the UDP transmitter parameters are defined |
+| *output*  | *hostname* | -  |  Yes    | Hostname where to send data |
 | *output*  | *port*     | -  |  Yes    | Port where to send data |
-| *aggr_functs* | -       | -  |  No     | Define the start of 'aggregation functionst' configuration section |
-| *aggr_functs*  | *avg/sum/max/min*  | -  |  No    | One of allowed aggregation functions. Requires a list of {*metricname* and *removetags* }|
-| *aggr_functs*  | *avg/sum/max/min*  | *metricname*  |  Yes (if one of *allowed_function* is present) | Metric name to aggregate |
-| *aggr_functs*  | *avg/sum/max/min*  | *removetags*  |  Yes (if one of *allowed_function* is present) | Tags to remove during the aggregation phase. If you want a global value for all host, just type [tag_host]|
-| *aggr_functs*  | *defaut*  | -  |  No    | Define aggregation function and which tags remove of not specified metric names |
-| *aggr_functs*  | *defaut*  | *function*  |  Yes (if *default* is present) | Function to use in the aggregation. Only the function listed in the Tab1 are allowed |
+| *aggr_functs* | -       | -  |  No     | Defines the start of 'aggregation functionst' configuration section |
+| *aggr_functs*  | *avg/sum/max/min*  | -  |  No    | One of allowed aggregation functions listed in the Tab 1. Requires a list of {*metricname* and *removetags* }|
+| *aggr_functs*  | *avg/sum/max/min*  | *metricname*  |  Yes (if the parent *allowed_function* is present) | Metric name to aggregate |
+| *aggr_functs*  | *avg/sum/max/min*  | *removetags*  |  Yes (if the parent *allowed_function* is present) | Tags to remove during the aggregation phase. If you want a global value for all host, just type [tag_host]|
+| *aggr_functs*  | *defaut*  | -  |  No    | Defines the default aggregation function and the tags to remove |
+| *aggr_functs*  | *defaut*  | *function*  |  Yes (if *default* is present) | Function to use in the aggregation. Only the function listed in the Tab 1 are allowed |
 | *aggr_functs*  | *defaut*  | *removetags*  |  Yes (if *default* is present) | Tags to remove during the aggregation phase. If you want a global value for all host, just type [tag_host]|
 
 ## Input format
-The input format corresponds to the Flume Avro event with the followings fields:
+The input format MUST have the followings fields:
 
 | Field | Mandatory | Description |
 | ------| -----------------| ------- |
@@ -141,13 +143,22 @@ The input format corresponds to the Flume Avro event with the followings fields:
 | *value_value* | Yes | Metric value | 
 | *tag_* | No | All tags must begin with "tag_". Es "tag_host", "tag_nic" |
 | *timestamp* | No | Timestamp |
+
+All fields are strings.
 
 ## Output format
-The output format corresponds to the format got selecting the *event mode* in the [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source)
+The output format is that used selecting the *event mode* in the [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source)
 
-| Field | Mandatory | Description |
-| ------| -----------------| ------- |
-| *name* | Yes | Metric name |
-| *tag_* | No | All tags must begin with "tag_". Es "tag_host", "tag_nic" |
-| *value_value* | Yes | Metric value | 
-| *timestamp* | No | Timestamp |
+```JSON
+{ "headers": 
+  {
+    "name": ["counter", "counter"],
+    "timestamp": ["read", "write"],
+    "value_value": 1251533299.265,
+    "tag_host": "o2.cern.ch",
+    "tag_path": "/tmp",
+    "type_value": "double"
+  }
+  "body" : ""
+}
+  
