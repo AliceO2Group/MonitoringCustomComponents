@@ -1,0 +1,39 @@
+general:
+  appname: SparkAggregator
+  window: 30
+
+input:
+  bindaddress: 0.0.0.0
+  port: 7777
+
+output:
+  protocol: udp
+  hostname: aido2mon1.cern.ch
+  port: 9998 #udp
+  
+
+aggr_functs:
+  default:
+    function: avg
+    removetags: [ tag_host]
+  avg:
+    - metricname: metricname1
+      removetags: [ tag_host]
+    - metricname: metricname2
+      removetags: [ tag_host]
+  sum:
+    - metricname: metricname1
+      removetags: [ tag_host]
+    - metricname: metricname2
+      removetags: [ tag_host]
+  max:
+    - metricname: metricname3
+      removetags: [ tag_host]
+    - metricname: metricname4
+      removetags: [ tag_host]
+  min:
+    - metricname: metricname3
+      removetags: [ tag_host]
+    - metricname: metricname4
+      removetags: [ tag_host]
+
