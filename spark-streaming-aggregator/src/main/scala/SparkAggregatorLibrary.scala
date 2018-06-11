@@ -32,11 +32,9 @@ import org.apache.spark._
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.flume._
 
-// /home/ubuntu/spark/bin/spark-submit --jars /home/ubuntu/spark/jars/spark-streaming-kafka-0-10-assembly_2.11-2.2.0.jar -- --class org.vino.DirectKafkaWordCount --master local[4] /home/ubuntu/projects/eventgen10/target/scala-2.11/spark-kafka-project_2.11-1.0.jar	
-
+// class used to parse the YAML configuration file
 case class YAMLGeneralConf(appname: String, window: Int)
 case class YAMLInputConf(bindaddress: String, port: Int)
-//case class YAMLOutputConf(protocol: String, hostname: String, port: Int)
 case class YAMLOutputConf(hostname: String, port: Int)
 case class YAMLSingleMetricConf(metricname: String, removetags: List[String])
 case class YAMLDefaultMetricConf(function: String, removetags: List[String])
@@ -54,6 +52,8 @@ object SparkAggregatorLibrary {
   val inputKey = "input"
   val outputKey = "output"
   
+
+  // the funtion import the configuration file and return two structured data containing both general and aggregation function configurations.
   def importYamlConfig(fileName: String) : Tuple2[Map[String,String],Map[String,Map[String,List[String]]]] = {
     var FunctionConf = Map[String,Map[String,List[String]]]()
     val strFile = Source.fromFile(fileName).mkString
@@ -115,6 +115,7 @@ object SparkAggregatorLibrary {
   (mConf,FunctionConf)
   }
   
+  // create a key from the event structure data
   def getKeyFromHeaders( headers: Map[String, String] ) : String = {
     var sMetricKey = headers(nameKey).replace("|", "") + "|"
     val lTags = headers.keys.toList.filter( _.contains("tag_")).sorted
@@ -125,8 +126,8 @@ object SparkAggregatorLibrary {
     }
     sMetricKey.dropRight(1)
   }
-  //val aggr_conf = Map[String,Tuple2[String,Array[String]]]("meas1" -> ("avg",Array("host")), "meas2" -> ("sum",Array("host")))
   
+  // convert the Flume Avro event in a ( MetricKey, Value_in_double, Aggregation_function)
   def toPoint( event: SparkFlumeEvent, mConf: Map[String,Map[String,List[String]]]) : Array[Tuple3[String,Double,String]] = {
     val headers = collection.mutable.Map[String, String]() 
     for( (k:CharSequence, v:CharSequence) <- event.event.getHeaders().asScala ){
@@ -172,20 +173,7 @@ object SparkAggregatorLibrary {
     aPoints
   }
   
-  def toAvroEvent( point: (String,Double), value_name: String ) : Event = {
-    val splittedPointKey = point._1.split('|')
-    var headers = Map[String,String](valueKey -> (splittedPointKey(0)+"_aggr"), ("value_"+value_name) -> point._2.toString, "type_value" -> "double")
-    if( splittedPointKey.length > 1 ){
-      for (item <- splittedPointKey(1).split(',')){
-        val temp1 = item.split(':')
-        headers += (temp1(0) -> temp1(1))
-      }
-    }
-    val body : Array[Byte] = Array()
-    val event : Event = EventBuilder.withBody(body, headers )
-    event
-  }
-  //Greeting("Hey", Person("Chris"), 3).asJson
+  //convert the point to the JSON to transmit to the Flume UDP Source
   def toJSON( point: (String,Double), timestamp: Long, value_name: String ) : String = {
     val splittedPointKey = point._1.split('|')
     var innerJSON = "name:" + splittedPointKey(0)+"_aggr" + ",value_"+value_name+":" + point._2.toString + ",type_value:double"
@@ -198,10 +186,5 @@ object SparkAggregatorLibrary {
     }
     val JSON = "{headers: {" + innerJSON + "}}"
     JSON
-    //val jsonEvents = avg.map( p => "{\"headers\":{\"name\":\"" + p._1 + "_aggr\"" + ",\"value_value\":\"" + p._2.toString + "\"}}" )
   }
-  
 }
-
-
-

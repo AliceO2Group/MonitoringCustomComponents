@@ -33,8 +33,6 @@ import org.apache.spark._
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.flume._
 
-// /home/ubuntu/spark/bin/spark-submit --jars /home/ubuntu/spark/jars/spark-streaming-kafka-0-10-assembly_2.11-2.2.0.jar -- --class org.vino.DirectKafkaWordCount --master local[4] /home/ubuntu/projects/eventgen10/target/scala-2.11/spark-kafka-project_2.11-1.0.jar	
-
 object SparkAggregator {
   
   val OutputPortKey = "OutputPort"
@@ -43,7 +41,6 @@ object SparkAggregator {
 
   def main(args: Array[String]) {
     // Import Configuration
-    
     if (args.length != 1) {
         println("You MUST pass ONLY the YAML configuration file path as parameter")
         System.exit(1)
@@ -55,9 +52,8 @@ object SparkAggregator {
       System.exit(1)
     }
     
-    val (mGeneralConfs,mFunctionConf) = importYamlConfig(fileName)
-
     // Read the configuration parameter from the YAML Reader object
+    val (mGeneralConfs,mFunctionConf) = importYamlConfig(fileName)
     val SparkBindAddress = mGeneralConfs("SparkBindAddress")
     val SparkAppName = mGeneralConfs("SparkAppName")
     val SparkPort = mGeneralConfs("SparkPort").toInt
@@ -79,6 +75,7 @@ object SparkAggregator {
     // 'Data' containing the following items: [(metrickey, value_in_double, aggregation_function),...]
     val data = flumeStream.flatMap( event => toPoint(event,bAggregationConf.value) ).cache()
     
+    //Compute the aggregations
     val avg_aggr_data = data.filter( p => p._3 == SparkAggregatorLibrary.avgKey )
                             .map( p => (p._1,(p._2,1)))
                             .reduceByKeyAndWindow( (x: Tuple2[Double,Int], y:Tuple2[Double,Int]) => (x._1+y._1,x._2+y._2), window, window)
@@ -96,6 +93,8 @@ object SparkAggregator {
                             .reduceByKeyAndWindow( (x:Double, y:Double) => ( if( x < y) x else y), window, window)
 
     val longTimestampNs: Long = System.currentTimeMillis * 1000000
+
+    //Create JSONs and merge all aggregation streams
     val avgJSON = avg_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.avgKey) )
     val sumJSON = sum_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.sumKey) )
     val maxJSON = max_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.maxKey) )
