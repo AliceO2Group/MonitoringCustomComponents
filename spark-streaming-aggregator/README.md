@@ -1,6 +1,6 @@
 # Spark Streaming aggregator
 
-This component computes aggregations of values coming from [Flume Avro Sink](https://flume.apache.org/FlumeUserGuide.html#avro-sink) using one of the allowed aggregation functions and sends the results back to a [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source) using the *event mode* format.
+This component computes aggregations of values coming from [Flume Avro Sink](https://flume.apache.org/FlumeUserGuide.html#avro-sink) using one of the allowed aggregation functions and sends the results back to a [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source) using its format.
 
 ## Dependencies
 - Spark > 2.2.0
@@ -51,7 +51,6 @@ agent.sinks.avro_sink.hostname = <rcv_hostname>
 agent.sinks.avro_sink.port = <rcv_port>
 
 agent.sources.my_source2.type = ch.cern.alice.o2.flume.UDPSource
-agent.sources.my_source2.mode = event
 agent.sources.my_source2.port = <dst_port>
 
 ...
@@ -154,7 +153,7 @@ The input format MUST have the followings fields:
 All fields are strings.
 
 ## Output format
-The output format is that used selecting the *event mode* in the [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source):
+The output format is that used in the [Flume UDP Source](https://github.com/AliceO2Group/MonitoringCustomComponents/tree/master/flume-udp-source):
 
 
 ```JSON
