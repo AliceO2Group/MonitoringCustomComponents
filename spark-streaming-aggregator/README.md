@@ -152,9 +152,9 @@ The output format is that used selecting the *event mode* in the [Flume UDP Sour
 ```JSON
 { "headers": 
   {
-    "name": <initial_metric_name>"_aggr",
+    "name": "<initial_metric_name>_aggr",
     "timestamp": "1528729384000000000",
-    "value_<used aggregation function>": 1251533299.265,
+    "value_<used aggregation function>": "1251533299.265",
     "tag_host": "o2.cern.ch",
     "tag_path": "/tmp",
     "type_value": "double"
@@ -169,7 +169,7 @@ For example:
   {
     "name": "disk_usage_aggr",
     "timestamp": "1528729384000000000",
-    "value_avg": 1251533299.265,
+    "value_avg": "1251533299.265",
     "tag_host": "o2.cern.ch",
     "tag_path": "/tmp",
     "type_value": "double"
