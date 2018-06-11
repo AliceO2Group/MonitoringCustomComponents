@@ -168,7 +168,7 @@ The output format is that used in the [Flume UDP Source](https://github.com/Alic
   },
   "body" : ""
 }
-  
+```
 For example:
 
 ```JSON
@@ -183,5 +183,6 @@ For example:
   },
   "body" : ""
 }
+```
 
 All fields are strings.
