@@ -158,7 +158,7 @@ The output format is that used selecting the *event mode* in the [Flume UDP Sour
     "tag_host": "o2.cern.ch",
     "tag_path": "/tmp",
     "type_value": "double"
-  }
+  },
   "body" : ""
 }
   
