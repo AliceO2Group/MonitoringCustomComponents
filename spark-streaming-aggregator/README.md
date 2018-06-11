@@ -114,6 +114,7 @@ YAML configuration file rules:
 
 
 Tab. 1
+
 | **Allowed functions** | Description | Returned value |
 | ----------| -----------------| ------- |
 | *avg* | Compute the average | Double |
