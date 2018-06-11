@@ -94,57 +94,27 @@ object SparkAggregator {
     val min_aggr_data = data.filter( p => p._3 == SparkAggregatorLibrary.minKey )
                             .map( p => (p._1,p._2))
                             .reduceByKeyAndWindow( (x:Double, y:Double) => ( if( x < y) x else y), window, window)
-    /*
-    if (bSenderConf.value == "avro"){
-      // Create too much connections 32 per DStream. With 4 Dstreams in an unique one (union) = 128 connections per time-window
-      val avgAvro = avg_aggr_data.map( toAvroEvent(_,SparkAggregatorLibrary.avgKey))
-      val sumAvro = sum_aggr_data.map( toAvroEvent(_,SparkAggregatorLibrary.sumKey))
-      val maxAvro = max_aggr_data.map( toAvroEvent(_,SparkAggregatorLibrary.maxKey))
-      val minAvro = min_aggr_data.map( toAvroEvent(_,SparkAggregatorLibrary.minKey))
-      val AvroEvents = avgAvro.union(sumAvro).union(maxAvro).union(minAvro)
-      
-      // Send to Flume
-      AvroEvents.foreachRDD { rdd => 
-        rdd.foreachPartition { partitionOfRecords =>
-          if( partitionOfRecords.length > 0 ){
-            val clientProps = new Properties()
-            val AvroEndpoint = OutputHostname+":"+OutputPort
-      	    clientProps.setProperty("hosts", "h1")
-      	    clientProps.setProperty("hosts.h1",AvroEndpoint)
-      	    clientProps.setProperty("maxIoWorkers","1");
-      	    val client = RpcClientFactory.getInstance(clientProps)
-      	    
-      	    //val client = RpcClientFactory.getDefaultInstance(AvroEndpointHostname, AvroEndpointPort)
-      	    //print(partitionOfRecords.map(_.toString()))
-      	    val list_events = partitionOfRecords.toList
-      	    client.appendBatch(list_events)
-      	    client.close();
-          }
-        }
-      }
-    }              */         
-                            
-    if (bSenderConf.value(OutputProtocoleKey) == "udp"){
-      val longTimestampNs: Long = System.currentTimeMillis * 1000000
-      val avgJSON = avg_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.avgKey) )
-      val sumJSON = sum_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.sumKey) )
-      val maxJSON = max_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.maxKey) )
-      val minJSON = min_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.minKey) )
-      val jsonEvents = avgJSON.union(sumJSON).union(maxJSON).union(minJSON)
-   
-      // send to Flume
-      jsonEvents.foreachRDD { rdd => 
-        rdd.foreachPartition { partitionOfRecords =>
-          val datagramSocket = new DatagramSocket();
-          val hostname = bSenderConf.value(OutputHostnameKey)
-          val port = bSenderConf.value(OutputPortKey).toInt
-          val address : InetAddress = InetAddress.getByName(hostname)
-          for( event <- partitionOfRecords){
-            datagramSocket.send( new DatagramPacket(event.getBytes , event.length(), address , port) )
-          }
+
+    val longTimestampNs: Long = System.currentTimeMillis * 1000000
+    val avgJSON = avg_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.avgKey) )
+    val sumJSON = sum_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.sumKey) )
+    val maxJSON = max_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.maxKey) )
+    val minJSON = min_aggr_data.map( toJSON(_, longTimestampNs, SparkAggregatorLibrary.minKey) )
+    val jsonEvents = avgJSON.union(sumJSON).union(maxJSON).union(minJSON)
+ 
+    // send to the Flume UDP Source
+    jsonEvents.foreachRDD { rdd => 
+      rdd.foreachPartition { partitionOfRecords =>
+        val datagramSocket = new DatagramSocket();
+        val hostname = bSenderConf.value(OutputHostnameKey)
+        val port = bSenderConf.value(OutputPortKey).toInt
+        val address : InetAddress = InetAddress.getByName(hostname)
+        for( event <- partitionOfRecords){
+          datagramSocket.send( new DatagramPacket(event.getBytes , event.length(), address , port) )
         }
       }
     }
+    
     
     // Start the computation
     ssc.start()
