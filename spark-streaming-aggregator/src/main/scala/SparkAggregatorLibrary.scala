@@ -1,6 +1,5 @@
 package ch.cern.alice.o2.spark.streaming
 
-//import org.apache.hadoop.hbase.spark.HBaseContext
 import java.io.IOException
 import java.lang.System
 import java.net.DatagramPacket
@@ -32,7 +31,7 @@ import org.apache.spark._
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.flume._
 
-// class used to parse the YAML configuration file
+// classes used to parse the YAML configuration file
 case class YAMLGeneralConf(appname: String, window: Int)
 case class YAMLInputConf(bindaddress: String, port: Int)
 case class YAMLOutputConf(hostname: String, port: Int)
@@ -57,7 +56,6 @@ object SparkAggregatorLibrary {
   def importYamlConfig(fileName: String) : Tuple2[Map[String,String],Map[String,Map[String,List[String]]]] = {
     var FunctionConf = Map[String,Map[String,List[String]]]()
     val strFile = Source.fromFile(fileName).mkString
-    //println(strFile)
     var Conf = Map[String,Map[String,List[String]]]()
     val json = yaml.parser.parse(strFile).right.get
     val listSubSection = json.hcursor.keys.get.toList

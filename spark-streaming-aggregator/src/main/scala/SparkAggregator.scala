@@ -114,7 +114,6 @@ object SparkAggregator {
       }
     }
     
-    
     // Start the computation
     ssc.start()
     ssc.awaitTermination()
