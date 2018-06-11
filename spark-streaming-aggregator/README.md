@@ -124,6 +124,7 @@ Tab. 1
 
 
 Tab. 2
+
 |  Section  |  First Keyword   |  Second Keyword(s)   | Mandatory | Description |
 | ----------| -----------------| ------- | ----------- |
 | *general* | -          | -  | Yes    | Define the start of 'general' configuration section |
