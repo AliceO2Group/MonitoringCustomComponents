@@ -112,12 +112,15 @@ YAML configuration file rules:
 - The `window` and `port` parameters MUST be integer
 - In the aggregation function section the `default` keyword is used to aggregate all metrics without the need to list all of them
 
+
 Tab. 1
 | **Allowed functions** | Description | Returned value |
+| ----------| -----------------| ------- |
 | *avg* | Compute the average | Double |
 | *sum* | Compute the sum     | Double |
 | *max* | Extract the maximum | Double | 
 | *min* | Extract the minimum | Double |
+
 
 Tab. 2
 |  Section  |  First Keyword   |  Second Keyword(s)   | Mandatory | Description |
