@@ -75,16 +75,15 @@ The YAML configuration file format is used to pass parameters to the aggregation
 ```
 general:
   appname: SparkAggregator
-  window: 30
+  window: 30 #seconds
 
 input:
   bindaddress: 0.0.0.0
-  port: 7777
+  port: <input_port>
 
 output:
-  protocol: udp
-  hostname: aido2mon1.cern.ch
-  port: 9998 #udp
+  hostname: <dst_hostname>
+  port: <dst_port>
 
 aggr_functs:
   default:
