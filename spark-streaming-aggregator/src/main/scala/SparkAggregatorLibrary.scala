@@ -74,7 +74,7 @@ object SparkAggregatorLibrary {
     
     if(!(listSubSection contains outputKey)){
       println("Error: Miss the 'output' section in the confguration file")
-      println("Es. output:\n  protocol: udp\n  hostname: aido2mon1.cern.ch\n  port: 9998")
+      println("Es. output:\n  hostname: aido2mon1.cern.ch\n  port: 9998")
       println("Exit!\n")
       System.exit(4)
     }
@@ -85,7 +85,6 @@ object SparkAggregatorLibrary {
     val mConf : Map[String,String] = Map( "SparkAppName" -> genConf.appname,
                                           "SparkBindAddress" -> inConf.bindaddress,
                                           "SparkPort" -> inConf.port.toString,
-                                          "OutputProtocol" -> outConf.protocol,
                                           "OutputHostname" -> outConf.hostname,
                                           "OutputPort" -> outConf.port.toString,
                                           "window" -> genConf.window.toString)
