@@ -13,10 +13,6 @@ target/
 *.war
 *.ear
 *.db
-
-
-# vim cache Files #
-*~
  
 ######################
 # Windows
