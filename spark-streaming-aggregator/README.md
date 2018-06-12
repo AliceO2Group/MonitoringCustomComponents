@@ -104,7 +104,7 @@ The YAML configuration file MUST follow these rules:
 - The keywords `default`, `avg`, `sum`, `max` and `min` are optionals but if inserted, a metricname/removetags list MUST be provided
 - All key words ( `general`, `appname`, `input`, ...) MUST be lowercase
 - The `window` and `port` parameters MUST be integer
-- 'deafult' can not be a metric name
+- 'default' can not be a metric name
 
 In the aggregation function section the `default` keyword is used to aggregate all metrics without the need to list all of them
 
