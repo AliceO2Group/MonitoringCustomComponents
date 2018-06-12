@@ -27,8 +27,6 @@ import org.apache.flume.api.RpcClientFactory
 import org.apache.flume.event.EventBuilder
 import org.apache.flume.Event
 import org.apache.flume.EventDeliveryException;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 import org.apache.spark._
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.flume._
