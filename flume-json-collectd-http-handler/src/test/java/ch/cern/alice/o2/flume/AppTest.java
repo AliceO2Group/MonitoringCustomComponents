@@ -1,4 +1,4 @@
-package ch.cern.alice.o2.spark.streaming;
+package ch.cern.alice.o2.flume;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
