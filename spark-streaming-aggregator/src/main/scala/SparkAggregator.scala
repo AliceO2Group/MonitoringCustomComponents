@@ -55,7 +55,6 @@ object SparkAggregator {
     val SparkBindAddress = mGeneralConfs("SparkBindAddress")
     val SparkAppName = mGeneralConfs("SparkAppName")
     val SparkPort = mGeneralConfs("SparkPort").toInt
-    val OutputProtocol = mGeneralConfs("OutputProtocol")
     val OutputHostname = mGeneralConfs("OutputHostname")
     val OutputPort = mGeneralConfs("OutputPort").toInt
     val window = Seconds(mGeneralConfs("window").toInt)
