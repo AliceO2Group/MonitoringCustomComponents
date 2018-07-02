@@ -86,6 +86,7 @@ object SparkAggregatorLibrary {
                                           "SparkBindAddress" -> inConf.bindaddress,
                                           "SparkPort" -> inConf.port.toString,
                                           "OutputHostname" -> outConf.hostname,
+                                          "OutputProtocol" -> "udp",
                                           "OutputPort" -> outConf.port.toString,
                                           "window" -> genConf.window.toString)
                                     
