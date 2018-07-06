@@ -35,7 +35,6 @@ object SparkAggregator {
   
   val OutputPortKey = "OutputPort"
   val OutputHostnameKey = "OutputHostname"
-  val OutputProtocoleKey = "OutputProtocol"
 
   def main(args: Array[String]) {
     // Import Configuration
@@ -110,6 +109,25 @@ object SparkAggregator {
         }
       }
     }
+   
+    flumeStream.foreachRDD{(rdd, time) =>
+      val count = rdd.count()
+      println("-------------------------------------------")
+      println(s"Time: $time")
+      println("-------------------------------------------")
+      println(s"Data received from Flume: $count\n")
+    }
+
+    data.foreachRDD{(rdd, time) =>
+      val count = rdd.count()
+      println(s"Data imported: $count\n")
+    }
+
+    jsonEvents.foreachRDD{(rdd, time) =>
+      val count = rdd.count()
+      println(s"Data to send: $count\n")
+    }
+    println("-------------------------------------------")
     
     // Start the computation
     ssc.start()

@@ -8,8 +8,8 @@ This component computes aggregations of values coming from [Flume Avro Sink](htt
 - Flume > 1.7.0
 
 ### Package Dependencies
-- [spark-streaming-flume-assembly_2.11-2.2.0](https://search.maven.org/remotecontent?filepath=org/apache/spark/spark-streaming-flume-assembly_2.11/2.2.0/spark-streaming-flume-assembly_2.11-2.2.0.jar)
-- [spark-streaming-flume_2.11-2.2.0](https://search.maven.org/remotecontent?filepath=org/apache/spark/spark-streaming-flume_2.11/2.2.0/spark-streaming-flume_2.11-2.2.0.jar)
+- [spark-streaming-flume-assembly_2.11-2.2.0](https://search.maven.org/remotecontent?filepath=org/apache/spark/spark-streaming-flume-assembly_2.11/2.2.1/spark-streaming-flume-assembly_2.11-2.2.1.jar)
+- [spark-streaming-flume_2.11-2.2.0](https://search.maven.org/remotecontent?filepath=org/apache/spark/spark-streaming-flume_2.11/2.2.1/spark-streaming-flume_2.11-2.2.1.jar)
 - [snakeyaml-1.20](central.maven.org/maven2/org/yaml/snakeyaml/1.20/snakeyaml-1.20.jar)
 - [circe-yaml-0.8.0](central.maven.org/maven2/io/circe/circe-yaml_2.10/0.8.0/circe-yaml_2.10-0.8.0.jar)
 - [circe-core-0.9.3](central.maven.org/maven2/io/circe/circe-core_2.10/0.9.3/circe-core_2.10-0.9.3.jar)
@@ -17,6 +17,10 @@ This component computes aggregations of values coming from [Flume Avro Sink](htt
 - [circe-generic-0.9.3](central.maven.org/maven2/io/circe/circe-generic_2.10/0.9.3/circe-generic_2.10-0.9.3.jar)
 - [cats-core-1.0.1](central.maven.org/maven2/org/typelevel/cats-core_2.10/1.0.1/cats-core_2.10-1.0.1.jar)
 - [cats-kernel-1.0.1](central.maven.org/maven2/org/typelevel/cats-kernel_2.10/1.0.1/cats-kernel_2.10-1.0.1.jar)
+- [flume-ng-core-1.8.0](central.maven.org/maven2/org/apache/flume/flume-ng-core/1.8.0/flume-ng-core-1.8.0.jar)
+- [flume-ng-sdk-1.8.0](central.maven.org/maven2/org/apache/flume/flume-ng-sdk/1.8.0/flume-ng-sdk-1.8.0.jar)
+- [flume-ng-configuration-1.8.0](central.maven.org/maven2/org/apache/flume/flume-ng-configuration/1.8.0/flume-ng-configuration-1.8.0.jar)
+
 
 ## Build
 1. Clone repository
