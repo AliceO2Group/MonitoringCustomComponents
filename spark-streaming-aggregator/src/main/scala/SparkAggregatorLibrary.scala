@@ -79,14 +79,6 @@ object SparkAggregatorLibrary {
       System.exit(4)
     }
     
-    println("Confinguration")
-    println( "SparkAppName: " + genConf.appname)
-    println( "SparkBindAddress: " + inConf.bindaddress)
-    println( "SparkPort: " + inConf.port.toString)
-    println( "OutputHostname: " + outConf.hostname)
-    println( "OutputPort: " + outConf.port.toString)
-    println( "timeWindow: " + genConf.window.toString)
-
     val genConf = json.hcursor.get[YAMLGeneralConf](generalKey).toOption.get
     val inConf = json.hcursor.get[YAMLInputConf](inputKey).toOption.get
     val outConf = json.hcursor.get[YAMLOutputConf](outputKey).toOption.get
@@ -97,6 +89,14 @@ object SparkAggregatorLibrary {
                                           "OutputPort" -> outConf.port.toString,
                                           "window" -> genConf.window.toString)
                                     
+    println("Confinguration")
+    println( "SparkAppName: " + genConf.appname)
+    println( "SparkBindAddress: " + inConf.bindaddress)
+    println( "SparkPort: " + inConf.port.toString)
+    println( "OutputHostname: " + outConf.hostname)
+    println( "OutputPort: " + outConf.port.toString)
+    println( "timeWindow: " + genConf.window.toString)
+
     if( listSubSection contains aggrFunctKey ){
       val listFuncts = json.hcursor.downField(aggrFunctKey).keys.get.toList
       for( f <- listFuncts.filter(_ != defaultKey)){
