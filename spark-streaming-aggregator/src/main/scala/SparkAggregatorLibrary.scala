@@ -89,6 +89,14 @@ object SparkAggregatorLibrary {
                                           "OutputPort" -> outConf.port.toString,
                                           "window" -> genConf.window.toString)
                                     
+    println("Confinguration")
+    println( "SparkAppName: " + genConf.appname)
+    println( "SparkBindAddress: " + inConf.bindaddress)
+    println( "SparkPort: " + inConf.port.toString)
+    println( "OutputHostname: " + outConf.hostname)
+    println( "OutputPort: " + outConf.port.toString)
+    println( "timeWindow: " + genConf.window.toString)
+
     if( listSubSection contains aggrFunctKey ){
       val listFuncts = json.hcursor.downField(aggrFunctKey).keys.get.toList
       for( f <- listFuncts.filter(_ != defaultKey)){
@@ -171,15 +179,15 @@ object SparkAggregatorLibrary {
   //convert the point to the JSON to transmit to the Flume UDP Source
   def toJSON( point: (String,Double), timestamp: Long, value_name: String ) : String = {
     val splittedPointKey = point._1.split('|')
-    var innerJSON = "name:" + splittedPointKey(0)+"_aggr" + ",value_"+value_name+":" + point._2.toString + ",type_value:double"
-    innerJSON = innerJSON + ",timestamp: " + timestamp.toString
+    var innerJSON = "\"name\":\"" + splittedPointKey(0)+"_aggr\"" + ",\"value_"+value_name+"\":\"" + point._2.toString + "\""
+    innerJSON = innerJSON + ",\"type_value\":\"double\",\"timestamp\":\"" + timestamp.toString + "\""
     if( splittedPointKey.length > 1 ){
       for (item <- splittedPointKey(1).split(',')){
         val temp1 = item.split(':')
         innerJSON = innerJSON + "," + temp1(0) + ":" + temp1(1)
       }
     }
-    val JSON = "{headers: {" + innerJSON + "}}"
+    val JSON = "{\"headers\":{" + innerJSON + "},\"body\":\"\"}\n"
     JSON
   }
 }
