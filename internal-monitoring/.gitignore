@@ -72,3 +72,6 @@ local.properties
 
 # Eclipse Settings
 .prefs
+
+## Python 
+*.pyc
