@@ -1,16 +1,26 @@
-language: scala
-scala:
-- 2.10.6
 sudo: false
-
-script:
-- cd ${TRAVIS_BUILD_DIR}/flume-http-influxdb-sink; mvn clean -e install -DskipTests
-- cd ${TRAVIS_BUILD_DIR}/flume-influxdb-timestamp-interceptor; mvn clean -e install -DskipTests
-- cd ${TRAVIS_BUILD_DIR}/flume-udp-influxdb-sink; mvn clean -e install -DskipTests
-- cd ${TRAVIS_BUILD_DIR}/flume-udp-source; mvn clean package -e -DskipTests
-- cd ${TRAVIS_BUILD_DIR}/spark-streaming-aggregator
-- travis_retry sbt package
-- cd ${TRAVIS_BUILD_DIR}/spark-streaming-pass-through; mvn clean -e install -DskipTests
-- cd ${TRAVIS_BUILD_DIR}/flume-json-collectd-http-handler; mvn clean -e install -DskipTests
+matrix:
+  include:
+    - language: python
+      python: 2.7
+      install:
+        - pip install -r requirements.txt
+      script:
+        - cd ${TRAVIS_BUILD_DIR}/internal-monitoring
+        - pycodestyle --exclude=*.log *
+    - language: scala
+      scala:
+        - 2.10.6
+      script:
+        - cd ${TRAVIS_BUILD_DIR}/spark-streaming-aggregator
+        - travis_retry sbt package
+    - language: java
+      script:
+       - cd ${TRAVIS_BUILD_DIR}/flume-http-influxdb-sink; mvn clean -e install -DskipTests
+       - cd ${TRAVIS_BUILD_DIR}/flume-influxdb-timestamp-interceptor; mvn clean -e install -DskipTests
+       - cd ${TRAVIS_BUILD_DIR}/flume-udp-influxdb-sink; mvn clean -e install -DskipTests
+       - cd ${TRAVIS_BUILD_DIR}/flume-udp-source; mvn clean package -e -DskipTests
+       - cd ${TRAVIS_BUILD_DIR}/spark-streaming-pass-through; mvn clean -e install -DskipTests
+       - cd ${TRAVIS_BUILD_DIR}/flume-json-collectd-http-handler; mvn clean -e install -DskipTests
 notifications:
   email: false
