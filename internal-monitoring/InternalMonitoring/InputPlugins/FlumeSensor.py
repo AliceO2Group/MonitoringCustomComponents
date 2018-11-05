@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import urllib2
-import json
+try:
+    import json
+except:
+    import simplejson as json
 
 try:
     import logging
