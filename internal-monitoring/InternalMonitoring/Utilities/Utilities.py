@@ -1,4 +1,4 @@
-	
+
 try:
     import logging
     logger = logging.getLogger('Utilities')
@@ -11,10 +11,7 @@ def print_json(json_data):
     Print JSON in a human readible way
     """
 
-    try:
-        import json
-    except:
-        import simplejson as json
+    import json
     try:
         print json.dumps(json_data, indent=2)
     except Exception as e:

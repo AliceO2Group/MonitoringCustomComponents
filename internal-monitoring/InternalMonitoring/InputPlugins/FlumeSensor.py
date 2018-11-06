@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import urllib2
+
 try:
     import json
-except:
+except Exception as e:
     import simplejson as json
 
 try:
