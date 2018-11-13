@@ -17,7 +17,6 @@ if 'https_proxy' in os.environ:
 
 
 default_yaml_file = os.path.dirname(argv[0])+"/conf/conf.yaml"
-print default_yaml_file
 allowed_command = ["start", "stop", "restart", "debug"]
 yaml_file = None
 cmd = None
