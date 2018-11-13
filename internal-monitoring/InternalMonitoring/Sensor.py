@@ -1,7 +1,6 @@
-from os import getcwd
 from sys import argv, exit
 from Core.SensorClass import SensorClass
-import os
+import os 
 from Utilities.Utilities import readConf
 
 
@@ -17,7 +16,8 @@ if 'https_proxy' in os.environ:
     del os.environ['https_proxy']
 
 
-default_yaml_file = getcwd()+"/conf/conf.yaml"
+default_yaml_file = os.path.dirname(argv[0])+"/conf/conf.yaml"
+print default_yaml_file
 allowed_command = ["start", "stop", "restart", "debug"]
 yaml_file = None
 cmd = None
