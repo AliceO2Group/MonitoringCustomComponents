@@ -9,8 +9,13 @@ def usage():
     print "usage: {} [-conf conf_path] "\
         "start|stop|restart|debug]".format(argv[0])
 
+if 'http_proxy' in os.environ:
+  del os.environ['http_proxy']
 
-default_yaml_file = getcwd()+"/conf.yaml"
+if 'https_proxy' in os.environ:
+  del os.environ['https_proxy']
+
+default_yaml_file = getcwd()+"/conf/conf.yaml"
 allowed_command = ["start", "stop", "restart", "debug"]
 yaml_file = None
 cmd = None
