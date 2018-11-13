@@ -1,6 +1,6 @@
 from sys import argv, exit
 from Core.SensorClass import SensorClass
-import os 
+import os
 from Utilities.Utilities import readConf
 
 
