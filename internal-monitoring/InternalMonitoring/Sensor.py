@@ -10,7 +10,14 @@ def usage():
         "start|stop|restart|debug]".format(argv[0])
 
 
-default_yaml_file = getcwd()+"/conf.yaml"
+if 'http_proxy' in os.environ:
+    del os.environ['http_proxy']
+
+if 'https_proxy' in os.environ:
+    del os.environ['https_proxy']
+
+
+default_yaml_file = getcwd()+"/conf/conf.yaml"
 allowed_command = ["start", "stop", "restart", "debug"]
 yaml_file = None
 cmd = None
