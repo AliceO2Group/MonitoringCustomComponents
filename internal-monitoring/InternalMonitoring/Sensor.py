@@ -1,4 +1,3 @@
-from os import getcwd
 from sys import argv, exit
 from Core.SensorClass import SensorClass
 import os
@@ -10,7 +9,14 @@ def usage():
         "start|stop|restart|debug]".format(argv[0])
 
 
-default_yaml_file = getcwd()+"/conf.yaml"
+if 'http_proxy' in os.environ:
+    del os.environ['http_proxy']
+
+if 'https_proxy' in os.environ:
+    del os.environ['https_proxy']
+
+
+default_yaml_file = os.path.dirname(argv[0])+"/conf/conf.yaml"
 allowed_command = ["start", "stop", "restart", "debug"]
 yaml_file = None
 cmd = None
