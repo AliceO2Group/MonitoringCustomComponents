@@ -3,8 +3,8 @@
 This folder contains all components used with [Apache Kafka](https://kafka.apache.org) in order to provide aggregation, processing and forwarding functionalities. 
 
 Current components:
-- [InfluxDB UDP Consumer]()
-- [Mattermost Consumer]()
+- [InfluxDB UDP Consumer](influxdb-udp-consumer)
+- [Mattermost Consumer](mattermost-consumer)
 
 ## Dependencies
 - Java > 1.8
@@ -38,7 +38,9 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar java ch.cern.alice.o2.kafka.connectors.InfluxdbUdpConsumer --config conf-influxdb-udp.yaml
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+ ch.cern.alice.o2.kafka.connectors.InfluxdbUdpConsumer \
+ --config conf-influxdb-udp.yaml
 ```
 
 #### Configuration file 
@@ -78,7 +80,7 @@ Tab. 1
 | *Kafka_consumer* | - | Yes | Defines the start of 'kafka_consumer' configuration section | - |
 | *Kafka_consumer* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
 | *Kafka_consumer* | *topic* | Yes | Input topic | - |
-| *Kafka_consumer* | *group.id* | No | A unique string that identifies the consumer group this consumer belongs to in order to achive load balancing | infludb-udp-consumer |
+| *Kafka_consumer* | *group.id* | No | A unique string that identifies the consumer group this consumer belongs to used for load balancing purpose | infludb-udp-consumer |
 | *Kafka_consumer* | *fetch.min.bytes* | No | The minimum amount of data the server should return for a fetch request | 1 |
 | *Kafka_consumer* | *auto.offset.reset* | No | Policy in the case the offset in Kafka is lost: earliest/latest | latest |
 | *Kafka_consumer* | *receive.buffer.bytes* | No | The size of the TCP receive buffer to use when reading data | 262144 |
@@ -102,13 +104,13 @@ The retrived messages from Kafka are JSON format and compliant to the Grafana no
 ```JSON
 {
   "description": "Test notification - Someone is testing the alert notification within grafana"
-  "client_url" : "http://<grafana-instance>:3000"
-  "details"    : "Triggered metrics:\nHigh value: 100.000\nHigher Value: 200.000"
+  "client_url": "http://<grafana-instance>:3000"
+  "details": "Triggered metrics:\nHigh value: 100.000\nHigher Value: 200.000"
 }
 ```
 
 The above JSON is converted in a Mattermost message with a JSON field per line. 
-Only the `description` is mandatory, the remaining two ones are print if present.
+Only the `description` field is mandatory, the remaining two ones are printed if present.
 
  
 The component could be configured in order to send inner monitoring data to an InfluxDB instance.
@@ -117,7 +119,9 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar java ch.cern.alice.o2.kafka.connectors.MattermostConsumer --config conf-mattermost.yaml
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.connectors.MattermostConsumer  \
+  --config conf-mattermost.yaml
 ```
 
 #### Configuration file 
