@@ -76,6 +76,7 @@ public class InfluxdbUdpConsumer {
 	private static final String DEFAULT_RECEIVE_BUFFER_BYTES = "262144";
 	private static final String DEFAULT_MAX_POLL_RECORDS = "1000000";
 	private static final String DEFAULT_ENABLE_AUTO_COMMIT_CONFIG = "false";
+	private static final String DEFAULT_GROUP_ID_CONFIG = "influxdb-udp-consumer";
 	private static final int POLLING_PERIOD_MS = 50;
 	
 	public static void main(String[] args) throws Exception {
@@ -99,7 +100,7 @@ public class InfluxdbUdpConsumer {
         data_endpoint_hostname = sender_config.getOrDefault("hostname",DEFAULT_HOSTNAME);
         data_endpoint_port = Integer.parseInt(sender_config.getOrDefault("port",DEFAULT_PORT));
         boolean stats_enabled = Boolean.valueOf(stats_config.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
-        stats_type = stats_config.getOrDefault("type", DEFAULT_STATS_TYPE);
+        stats_type = DEFAULT_STATS_TYPE;
         stats_endpoint_hostname = stats_config.getOrDefault("hostname", DEFAULT_HOSTNAME);
         stats_endpoint_port = Integer.parseInt(stats_config.getOrDefault("port", DEFAULT_PORT));
         stats_period_ms = Integer.parseInt(stats_config.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
@@ -135,15 +136,15 @@ public class InfluxdbUdpConsumer {
         
         /* Configure Kafka consumer */
         Properties props = new Properties();
-    	props.put(ConsumerConfig.GROUP_ID_CONFIG, "influxdb-udp-consumer");
+    	props.put(ConsumerConfig.GROUP_ID_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.GROUP_ID_CONFIG,DEFAULT_GROUP_ID_CONFIG));
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, DEFAULT_ENABLE_AUTO_COMMIT_CONFIG);
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_consumer_config.get("bootstrap.servers"));
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, kafka_consumer_config.getOrDefault("auto.offset.reset", DEFAULT_AUTO_OFFSET_RESET));
-        props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, kafka_consumer_config.getOrDefault("fetch.min.bytes", DEFAULT_FETCH_MIN_BYTES));
-        props.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, kafka_consumer_config.getOrDefault("receive.buffer.bytes", DEFAULT_RECEIVE_BUFFER_BYTES));
-        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, kafka_consumer_config.getOrDefault("max.poll.records", DEFAULT_MAX_POLL_RECORDS));
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_consumer_config.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, DEFAULT_AUTO_OFFSET_RESET));
+        props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, DEFAULT_FETCH_MIN_BYTES));
+        props.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.RECEIVE_BUFFER_CONFIG, DEFAULT_RECEIVE_BUFFER_BYTES));
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, DEFAULT_MAX_POLL_RECORDS));
     	
         KafkaConsumer<byte[],byte[]> consumer = new KafkaConsumer<byte[],byte[]>(props);
         consumer.subscribe(Collections.singletonList(topicName));

@@ -84,7 +84,7 @@ public class MattermostConsumer {
         mattermost_url = mattermost_config.get("url");
         String topicName = kafka_consumer_config.get("topic");
         boolean stats_enabled = Boolean.valueOf(stats_config.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
-        stats_type = stats_config.getOrDefault("type", DEFAULT_STATS_TYPE);
+        stats_type = DEFAULT_STATS_TYPE;
         stats_endpoint_hostname = stats_config.getOrDefault("hostname", DEFAULT_HOSTNAME);
         stats_endpoint_port = Integer.parseInt(stats_config.getOrDefault("port", DEFAULT_PORT)); 
         stats_period_ms = Integer.parseInt(stats_config.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
