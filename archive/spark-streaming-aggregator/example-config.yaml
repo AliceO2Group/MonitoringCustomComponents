@@ -1,0 +1,28 @@
+general:
+  appname: SparkAggregator
+  window: 30 #seconds
+
+input:
+  bindaddress: 0.0.0.0
+  port: <input_port>
+
+output:
+  hostname: <dst_hostname>
+  port: <dst_port>
+
+aggr_functs:
+  default:
+    function: avg
+    removetags: [ tag_host ]
+  avg:
+    - metricname: metricname1
+      removetags: [ tag_host, tag_volumes ]
+  sum:
+    - metricname: metricname1
+      removetags: [ tag_host, tag_path ]
+  max:
+    - metricname: metricname3
+      removetags: [ tag_host ]
+  min:
+    - metricname: metricname3
+      removetags: [ ] #in this case no tags will be removed and the aggregation will preserve all tags.
