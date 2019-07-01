@@ -3,8 +3,8 @@
 This folder contains all components used with [Apache Kafka](https://kafka.apache.org) in order to provide aggregation, processing and forwarding functionalities. 
 
 Current components:
-- [InfluxDB UDP Consumer](influxdb-udp-consumer)
-- [Mattermost Consumer](mattermost-consumer)
+- [InfluxDB UDP Consumer]()
+- [Mattermost Consumer]()
 
 ## Dependencies
 - Java > 1.8
@@ -103,9 +103,9 @@ The retrived messages from Kafka are JSON format and compliant to the Grafana no
 
 ```JSON
 {
-  "description": "Test notification - Someone is testing the alert notification within grafana"
-  "client_url": "http://<grafana-instance>:3000"
-  "details": "Triggered metrics:\nHigh value: 100.000\nHigher Value: 200.000"
+  "description": "Test notification - Someone is testing the alert notification within grafana",
+  "client_url" : "http://<grafana-instance>:3000",
+  "details"    : "Triggered metrics:\nHigh value: 100.000\nHigher Value: 200.000"
 }
 ```
 
