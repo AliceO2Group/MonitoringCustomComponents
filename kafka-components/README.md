@@ -1,27 +1,17 @@
 
+
 # Kafka components
-This folder contains all components used with [Apache Kafka](https://kafka.apache.org) in order to provide aggregation, processing and forwarding functionalities. 
-
-Current components:
-- [InfluxDB UDP Consumer]()
-- [Mattermost Consumer]()
-
-## Dependencies
-- Java > 1.8
-- Apache Kafka >= 2.0
-	
-## Build
 This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and cosume metrics. 
 
 Functional components:
 - [InfluxDB UDP Consumer](#influxdb-udp-consumer)
 - [Mattermost Consumer](#mattermost-consumer)
+- [Email Consumer](#email-Consumer)
 
 ### Dependencies
 - Java > 1.8
 
 ### Build
->>>>>>> 3afd732d0bd45251f93ab3e128e0ea1b9e63568e
 1. Clone repository
 ```
  git clone https://github.com/AliceO2Group/MonitoringCustomComponents.git && cd kafka-components 
@@ -31,23 +21,11 @@ Functional components:
  mvn clean -e install -DskipTests 
 ```
 
-The generated jar (`.target/o2-kafka-0.1-jar-with-dependencies.jar`) contains all dependencies inside, so there is no need to download them manually.
-
-## Run
-
-1. Edit the YAML configuration file according the specific component
-2. Execute the command
 The generated jar (`target/o2-kafka-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
 ## Components
 
 ### InfluxDB UDP Consumer
-This component retrieves messages from the Kafka cluster and forward them to a single InfluxDB instance. 
-The messages are supposed have the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
-The component could be configured in order to send inner monitoring data to an InfluxDB instance.
-
-#### Command
-The consumer is execute using the following command
 This component retrieves messages from the Kafka cluster and forward them to an InfluxDB instance. 
 The messages need to be formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
 The component could be configured in order to send inner monitoring data to an InfluxDB instance.
@@ -111,7 +89,6 @@ Tab. 1
 | *stats*  | *hostname* | No | Endpoint hostname | 
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
-
 
 
 ### Mattermost Consumer
@@ -230,12 +207,12 @@ email_config:
 
 stats_config:
    enabled: true
-   hostname: <infludb-instance-hostname>
-   port: 8090
+   hostname: <infludb-hostname>
+   port: <infludb-udp-port>
    period_ms: 10000
 ```
 
-Tab. 2
+Tab. 3
 
 | Section | First Keyword | Mandatory | Description | Default value |
 | --------| --------------| ----------| ----------- | ------------- |
