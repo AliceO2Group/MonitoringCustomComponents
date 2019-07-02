@@ -1,0 +1,31 @@
+general:
+   log4jfilename: ./log4j.properties
+
+input_topic: test3p2r
+output_avg_topic: aggr-avg
+output_sum_topic: aggr-sum
+output_min_topic: aggr-min
+output_max_topic: aggr-max
+output_other_topic: aggr-other
+
+kafka_config:
+   bootstrap_servers: aido2qc41:9092,aido2qc42:9092,aido2qc43:9092
+   numTheads: 1
+   
+selection:
+   avg:
+      -   measurement: meas0
+          tag_to_remove: hostname,cardid
+      -   measurement: meas1
+          tag_to_remove: hostname,cardid        
+   min:
+      -   measurement: meas2
+          tag_to_remove: hostname,cardid
+      -   measurement: meas3
+          tag_to_remove: hostname,cardid         
+   max:
+      -   measurement: meas4
+          tag_to_remove: hostname,cardid    
+   sum:
+      -   measurement: meas5
+          tag_to_remove: hostname,cardid
