@@ -16,7 +16,6 @@
  */
 package ch.cern.alice.o2.kafka.streams;
 
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -58,7 +57,6 @@ import ch.cern.alice.o2.kafka.utils.AvgPair;
 import ch.cern.alice.o2.kafka.utils.ExtendedSerdes;
 
 public class AggregatorAvg {
-	
 	private static Logger logger = LoggerFactory.getLogger(AggregatorAvg.class); 
     
 	public static String getFastMeasurement(String meas) {
@@ -89,7 +87,6 @@ public class AggregatorAvg {
 			return new ArrayList<Triplet<String,Double,String>>();
 		}
 	}
-	//[meas3,hostname=host_97,cardid=card_51|longfield@1554997290000/1554997300000]:MAX ->97.0
 	public static String getLineProtocol(Windowed<String> key, Double value, String op) {
 		String lp = key.key().replace("|", " ")+"_"+op+"="+value.toString()+" "+key.window().end()+"000000";
 		return lp;
@@ -103,9 +100,6 @@ public class AggregatorAvg {
         YamlAggregatorConfig config = mapper.readValue( new File(config_filename), YamlAggregatorConfig.class);
         
         String avg_topic = config.getTopics().get("avg");
-        String sum_topic = config.getTopics().get("sum");
-        String min_topic = config.getTopics().get("min");
-        String max_topic = config.getTopics().get("max");
         String results_topic = config.getTopics().get("results");
         String log4jfilename = config.getGeneral().get("log4jfilename");
         long window = Long.parseLong(config.getGeneral().get("window"));
@@ -123,13 +117,9 @@ public class AggregatorAvg {
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Integer.parseInt(kafka_config.getOrDefault("numTheads", "1")));
         
-        final Serde<String> stringSerde = Serdes.String();
-        final Serde<Double> doubleSerde = Serdes.Double();
-        
         final StreamsBuilder builder = new StreamsBuilder();
-        
         try {
-        	KStream<String, Double> avg_data = builder.stream(avg_topic, Consumed.with(stringSerde, doubleSerde));
+        	KStream<String, Double> avg_data = builder.stream(avg_topic, Consumed.with(Serdes.String(), Serdes.Double()));
         	KStream<String, String> avg_aggr_stream = avg_data
             		.mapValues( (key,value) -> new AvgPair(value,1) )
             		.groupByKey(Grouped.with(Serdes.String(), ExtendedSerdes.AvgPair() ))
@@ -143,11 +133,8 @@ public class AggregatorAvg {
         }
         
         final Topology topology = builder.build();
- 
         logger.info(topology.describe().toString());
-        
         final KafkaStreams streams = new KafkaStreams(topology, props);
-        
         final CountDownLatch latch = new CountDownLatch(10);
  
         // attach shutdown handler to catch control-c
@@ -158,7 +145,6 @@ public class AggregatorAvg {
                 latch.countDown();
             }
         });
- 
         try {
             streams.start();
             latch.await();

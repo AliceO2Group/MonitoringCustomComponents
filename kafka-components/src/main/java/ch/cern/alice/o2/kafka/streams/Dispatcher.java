@@ -56,9 +56,7 @@ import ch.cern.alice.o2.kafka.utils.LineProtocol;
 import ch.cern.alice.o2.kafka.utils.SimplePair;
 
 public class Dispatcher {
-	
 	private static Logger logger = LoggerFactory.getLogger(Dispatcher.class); 
-    
 	public static String getFastMeasurement(String meas) {
 		char [] temp = new char[50];
 		char [] ch_meas = meas.toCharArray(); 
@@ -88,7 +86,6 @@ public class Dispatcher {
 			return new ArrayList<Triplet<String,Double,String>>();
 		}
 	}
-	//[meas3,hostname=host_97,cardid=card_51|longfield@1554997290000/1554997300000]:MAX ->97.0
 	public static String getLineProtocol(Windowed<String> key, Double value, String op) {
 		String lp = key.key().replace("|", " ")+"_"+op+"="+value.toString()+" "+key.window().end()+"000000";
 		return lp;
@@ -143,11 +140,8 @@ public class Dispatcher {
         }
         
         final StreamsBuilder builder = new StreamsBuilder();
-        
         try {
-        
 	        KStream<String, String> source = builder.stream(input_topic);
-	        
 	        KStream<String,LineProtocol> lp_data = source.mapValues( 
 	        		value -> {
 	        			LineProtocol result = new LineProtocol();

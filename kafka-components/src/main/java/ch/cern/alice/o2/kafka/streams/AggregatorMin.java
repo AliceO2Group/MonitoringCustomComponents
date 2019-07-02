@@ -16,7 +16,6 @@
  */
 package ch.cern.alice.o2.kafka.streams;
 
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -54,8 +53,6 @@ import java.util.concurrent.CountDownLatch;
 import ch.cern.alice.o2.kafka.utils.LineProtocol;
 import ch.cern.alice.o2.kafka.utils.SimplePair;
 import ch.cern.alice.o2.kafka.utils.YamlAggregatorConfig;
-import ch.cern.alice.o2.kafka.utils.AvgPair;
-import ch.cern.alice.o2.kafka.utils.ExtendedSerdes;
 
 public class AggregatorMin {
 	
@@ -89,7 +86,6 @@ public class AggregatorMin {
 			return new ArrayList<Triplet<String,Double,String>>();
 		}
 	}
-	//[meas3,hostname=host_97,cardid=card_51|longfield@1554997290000/1554997300000]:MAX ->97.0
 	public static String getLineProtocol(Windowed<String> key, Double value, String op) {
 		String lp = key.key().replace("|", " ")+"_"+op+"="+value.toString()+" "+key.window().end()+"000000";
 		return lp;
@@ -102,10 +98,7 @@ public class AggregatorMin {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         YamlAggregatorConfig config = mapper.readValue( new File(config_filename), YamlAggregatorConfig.class);
         
-        String avg_topic = config.getTopics().get("avg");
-        String sum_topic = config.getTopics().get("sum");
         String min_topic = config.getTopics().get("min");
-        String max_topic = config.getTopics().get("max");
         String results_topic = config.getTopics().get("results");
         String log4jfilename = config.getGeneral().get("log4jfilename");
         long window = Long.parseLong(config.getGeneral().get("window"));
@@ -123,13 +116,9 @@ public class AggregatorMin {
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Integer.parseInt(kafka_config.getOrDefault("numTheads", "1")));
         
-        final Serde<String> stringSerde = Serdes.String();
-        final Serde<Double> doubleSerde = Serdes.Double();
-        
         final StreamsBuilder builder = new StreamsBuilder();
-        
         try {
-        	KStream<String, Double> min_data = builder.stream(min_topic, Consumed.with(stringSerde, doubleSerde));
+        	KStream<String, Double> min_data = builder.stream(min_topic, Consumed.with(Serdes.String(), Serdes.Double()));
         	KStream<String, String> min_aggr_stream = min_data
             		.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
     				.windowedBy(TimeWindows.of(Duration.ofSeconds(window)))
@@ -142,11 +131,8 @@ public class AggregatorMin {
 	    }
         
         final Topology topology = builder.build();
- 
         logger.info(topology.describe().toString());
-        
         final KafkaStreams streams = new KafkaStreams(topology, props);
-        
         final CountDownLatch latch = new CountDownLatch(1);
  
         // attach shutdown handler to catch control-c
