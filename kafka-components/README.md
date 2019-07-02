@@ -3,13 +3,13 @@
 This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and cosume metrics. 
 
 Functional components:
-- InfluxDB UDP Consumer
-- Mattermost Consumer
+- [InfluxDB UDP Consumer](#influxdb-udp-consumer)
+- [Mattermost Consumer](#mattermost-consumer)
 
-## Dependencies
+### Dependencies
 - Java > 1.8
 
-## Build
+### Build
 1. Clone repository
 ```
  git clone https://github.com/AliceO2Group/MonitoringCustomComponents.git && cd kafka-components 
@@ -21,20 +21,15 @@ Functional components:
 
 The generated jar (`target/o2-kafka-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
-## Run
-
-1. Edit the YAML configuration file according the specific component
-2. Execute the command
-
 ## Components
 
 ### InfluxDB UDP Consumer
-This component retrieves messages from the Kafka cluster and forward them to a single InfluxDB instance. 
-The messages are supposed have the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
+This component retrieves messages from the Kafka cluster and forward them to an InfluxDB instance. 
+The messages need to be formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
 The component could be configured in order to send inner monitoring data to an InfluxDB instance.
 
-#### Command
-The consumer is execute using the following command
+#### Run
+The consumer can started using the following command:
 
 ```
 java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
