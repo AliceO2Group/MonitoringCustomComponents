@@ -1,15 +1,14 @@
 
 # Kafka components
-This folder contains all components used with [Apache Kafka](https://kafka.apache.org) in order to provide aggregation, processing and forwarding functionalities. 
+This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and cosume metrics. 
 
-Current components:
-- [InfluxDB UDP Consumer]()
-- [Mattermost Consumer]()
+Functional components:
+- InfluxDB UDP Consumer
+- Mattermost Consumer
 
 ## Dependencies
 - Java > 1.8
-- Apache Kafka >= 2.0
-	
+
 ## Build
 1. Clone repository
 ```
@@ -20,7 +19,7 @@ Current components:
  mvn clean -e install -DskipTests 
 ```
 
-The generated jar (`.target/o2-kafka-0.1-jar-with-dependencies.jar`) contains all dependencies inside, so there is no need to download them manually.
+The generated jar (`target/o2-kafka-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
 ## Run
 
