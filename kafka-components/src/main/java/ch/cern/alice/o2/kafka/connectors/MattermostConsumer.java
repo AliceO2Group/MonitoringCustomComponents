@@ -95,7 +95,6 @@ public class MattermostConsumer {
 		
 		/* Stats Configuration */
         if( stats_enabled ) {
-	        logger.info("Stats Type: "+ stats_type);
 	        logger.info("Stats Endpoint Hostname: "+stats_endpoint_hostname);
 	        logger.info("Stats Endpoint Port: "+stats_endpoint_port);
 	        logger.info("Stats Period: "+stats_period_ms+"ms");

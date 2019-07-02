@@ -22,16 +22,19 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Arrays;
+import java.util.Set;
+
 import java.util.Collections;
-import java.util.List;
+import java.util.HashMap;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.consumer.RetriableCommitFailedException;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.log4j.PropertyConfigurator;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,22 +49,29 @@ import static net.sourceforge.argparse4j.impl.Arguments.store;
 import java.net.SocketException;
 import java.io.File;
 
-import ch.cern.alice.o2.kafka.utils.YamlInfluxdbUdpConsumer;
+import ch.cern.alice.o2.kafka.utils.YamlEmailConsumer;
 
-public class InfluxdbUdpConsumer {
-	private static Logger logger = LoggerFactory.getLogger(InfluxdbUdpConsumer.class); 
-	private static int data_endpoint_port = 0;
-	private static int [] data_endpoint_ports = null;
-	private static int data_endpoint_ports_size = 0;
-	private static int data_endpoint_ports_index = 0;
+import org.apache.commons.mail.Email;
+import org.apache.commons.mail.EmailException;
+import org.apache.commons.mail.SimpleEmail;
+
+public class EmailConsumer {
+	private static Logger logger = LoggerFactory.getLogger(EmailConsumer.class); 
+	
+	/* Email private vars */
+	private static String email_hostname = "";
+	private static int email_port = 0;
+	private static String email_username = "";
+	private static String email_password = "";
+	private static String email_from = "";
+	
+	/* Stats private vars */
 	private static int stats_endpoint_port = 0;
 	private static long receivedRecords = 0;
 	private static long sentRecords = 0;
 	private static long stats_period_ms = 0;
 	private static long startMs = 0;
 	private static String stats_type;
-	private static String data_endpoint_hostname =  null;
-	private static InetAddress data_address = null;
 	private static InetAddress stats_address = null;
 	private static DatagramSocket datagramSocket;
 	
@@ -77,12 +87,56 @@ public class InfluxdbUdpConsumer {
 	
 	/* Kafka consumer parameters */
 	private static final String DEFAULT_AUTO_OFFSET_RESET = "latest";
-	private static final String DEFAULT_FETCH_MIN_BYTES = "1";
-	private static final String DEFAULT_RECEIVE_BUFFER_BYTES = "262144";
-	private static final String DEFAULT_MAX_POLL_RECORDS = "1000000";
 	private static final String DEFAULT_ENABLE_AUTO_COMMIT_CONFIG = "false";
-	private static final String DEFAULT_GROUP_ID_CONFIG = "influxdb-udp-consumer";
+	private static final String DEFAULT_GROUP_ID_CONFIG = "email-consumer";
 	private static final int POLLING_PERIOD_MS = 50;
+	
+	public EmailConsumer(String hostname, int port, String username, String password, String from) {
+		email_hostname = hostname;
+		email_port = port;
+		email_username = username;
+		email_password = password;
+		email_from = from;
+	}
+	
+	public void sendEmail(String json_data) {
+		try {
+			Map<String,String> email_data = parseJSON(json_data);
+    		final Email email = new SimpleEmail();
+    		email.setHostName(email_hostname);
+    		email.setSmtpPort(email_port);
+    		email.setFrom(email_from);
+    		email.setAuthentication(email_username, email_password);
+    		email.setSubject(email_data.get("subject"));
+    		email.setMsg(email_data.get("body"));
+    		for( String address : email_data.get("to_addresses").split(",")) {
+    			email.addTo(address);
+    		}
+    		email.send();
+    		sentRecords++;
+    		logger.info("Mail sent to: " + json_data);
+    	} catch (final EmailException e) {
+    		logger.error(e.getMessage(), e);
+    	} catch (final JSONException  e) {
+    		logger.error(e.getMessage(), e);
+    	} catch (final Exception  e) {
+    		logger.error(e.getMessage(), e);
+    	}
+	}
+	
+	private static Map<String,String> parseJSON( String input_json) throws Exception {
+		Map<String,String> data = new HashMap<String,String>();
+		JSONObject input_json_obj = new JSONObject(input_json);
+        Set<String> fields = input_json_obj.keySet();
+        if( fields.contains("to_addresses") && fields.contains("subject") && fields.contains("body")) {
+        	data.put("to_addresses", input_json_obj.getString("to_addresses") );
+        	data.put("body", input_json_obj.getString("body") );
+        	data.put("subject", input_json_obj.getString("subject") );
+        	return data;
+        } else {
+        	throw new Exception("'body', 'subject' or 'to_addresses' field(s) are not in the JSON: " + input_json);
+        }
+	}
 	
 	public static void main(String[] args) throws Exception {
         String stats_endpoint_hostname = null;
@@ -95,45 +149,29 @@ public class InfluxdbUdpConsumer {
         
         /* Parse yaml configuration file */
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        YamlInfluxdbUdpConsumer config = mapper.readValue( new File(config_filename), YamlInfluxdbUdpConsumer.class);
+        YamlEmailConsumer config = mapper.readValue( new File(config_filename), YamlEmailConsumer.class);
         String log4jfilename = config.getGeneral().get("log4jfilename");
         PropertyConfigurator.configure(log4jfilename);
         Map<String,String> kafka_consumer_config = config.getKafka_consumer_config();
-        Map<String,String> sender_config = config.getSender_config();
+        Map<String,String> email_config = config.getEmail_config();
         Map<String,String> stats_config = config.getStats_config();
         String topicName = kafka_consumer_config.get("topic");
-        data_endpoint_hostname = sender_config.getOrDefault("hostname",DEFAULT_HOSTNAME);
-        //data_endpoint_port = Integer.parseInt(sender_config.getOrDefault("port",DEFAULT_PORT));
-        String[] data_endpoint_ports_str = sender_config.getOrDefault("port",DEFAULT_PORT).split(",");
-        System.out.println(sender_config.getOrDefault("port",DEFAULT_PORT));
-        System.out.println(data_endpoint_ports_str);
-        data_endpoint_ports = new int[data_endpoint_ports_str.length];
-        for( int i=0; i < data_endpoint_ports_str.length; i++) {
-        	data_endpoint_ports[i] = Integer.parseInt(data_endpoint_ports_str[i]);
-        }
-        data_endpoint_ports_size = data_endpoint_ports_str.length;
+        String email_hostname = email_config.get("hostname");
+        int email_port = Integer.parseInt(email_config.get("port"));
+        String email_username = email_config.get("username");
+        String email_password = email_config.get("password");
+        String email_from = email_config.get("from");
         
+        /* Emailer Configuration */
+        EmailConsumer emailer = new EmailConsumer(email_hostname, email_port, email_username, email_password, email_from); 
+        
+        /* Stats Configuration */
         boolean stats_enabled = Boolean.valueOf(stats_config.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
         stats_type = DEFAULT_STATS_TYPE;
         stats_endpoint_hostname = stats_config.getOrDefault("hostname", DEFAULT_HOSTNAME);
         stats_endpoint_port = Integer.parseInt(stats_config.getOrDefault("port", DEFAULT_PORT));
         stats_period_ms = Integer.parseInt(stats_config.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
-        
-        logger.info("Data Endpoint Hostname: "+ Arrays.toString(data_endpoint_ports));
         logger.info("Stats Enabled?: "+ stats_enabled);
-        
-        /* UDP Configuration */
-        try {
-        	data_address = InetAddress.getByName(data_endpoint_hostname);
-        } catch (IOException e) {
-          logger.error("Error opening creation address using hostname: "+data_endpoint_hostname, e);
-        }
-        
-        try {
-	        datagramSocket = new DatagramSocket();
-	      } catch (SocketException e) {
-	        logger.error("Error while creating UDP socket", e);
-	    }
         
         if( stats_enabled ) {
 	        logger.info("Stats Endpoint Hostname: "+stats_endpoint_hostname);
@@ -144,54 +182,34 @@ public class InfluxdbUdpConsumer {
 	        } catch (IOException e) {
 	          logger.error("Error opening creation address using hostname: "+stats_endpoint_hostname, e);
 	        }
+	        try {
+		        datagramSocket = new DatagramSocket();
+		      } catch (SocketException e) {
+		        logger.error("Error while creating UDP socket", e);
+		    }
         }
         
         /* Configure Kafka consumer */
-        Properties props = new Properties();
-    	props.put(ConsumerConfig.GROUP_ID_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.GROUP_ID_CONFIG,DEFAULT_GROUP_ID_CONFIG));
+    	Properties props = new Properties();
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, DEFAULT_GROUP_ID_CONFIG);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, DEFAULT_ENABLE_AUTO_COMMIT_CONFIG);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_consumer_config.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, DEFAULT_AUTO_OFFSET_RESET));
-        props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, DEFAULT_FETCH_MIN_BYTES));
-        props.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.RECEIVE_BUFFER_CONFIG, DEFAULT_RECEIVE_BUFFER_BYTES));
-        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, DEFAULT_MAX_POLL_RECORDS));
     	
         KafkaConsumer<byte[],byte[]> consumer = new KafkaConsumer<byte[],byte[]>(props);
         consumer.subscribe(Collections.singletonList(topicName));
-     
+        
         while (true) {
-        	try {
-                ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
-                receivedRecords += consumerRecords.count();
-                consumerRecords.forEach( record -> sendUdpData(record.value()));
-        		consumer.commitAsync();
-        		if( stats_enabled ) stats();
-            } catch (RetriableCommitFailedException e) {
-        		logger.error("Kafka Consumer Committ Exception: ",e);
-        		consumer.close();
-        		break;
-        	} catch (Exception e) {
-    			logger.error("Kafka Consumer Error: ",e);
-    			consumer.close();
-        		break;
-    		}
+			ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
+			receivedRecords += consumerRecords.count();
+			if( stats_enabled ) stats();
+            for (ConsumerRecord<byte[], byte[]> record : consumerRecords) {
+            	emailer.sendEmail(new String(record.value()));
+            }
         }
 	}
-	
-	private static void sendUdpData(byte[] data2send) {
-		try {
-			DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_endpoint_ports[(data_endpoint_ports_index++)%data_endpoint_ports_size]);
-			//if(data_endpoint_ports_index >= data_endpoint_ports_size) data_endpoint_ports_index = 0 ;
-	        datagramSocket.send(packet);
-	        sentRecords++;
-		} catch (Exception e) {
-			logger.error("Error: ",e);
-		}
-	}
-	
-	
 	
 	private static void stats() throws IOException {
 		long nowMs = System.currentTimeMillis();
@@ -199,7 +217,7 @@ public class InfluxdbUdpConsumer {
     		startMs = nowMs;
     		String hostname = InetAddress.getLocalHost().getHostName();
 			if(stats_type.equals(STATS_TYPE_INFLUXDB)) {
-	    		String data2send = "kafka_consumer,endpoint_type=InfluxDB,endpoint="+data_endpoint_hostname+":"+data_endpoint_port+",hostname="+hostname;
+	    		String data2send = "kafka_consumer,endpoint_type=Emailer,hostname="+hostname;
 				data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
 				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), stats_address, stats_endpoint_port);
 		        datagramSocket.send(packet);
@@ -210,17 +228,15 @@ public class InfluxdbUdpConsumer {
 	private static ArgumentParser argParser() {
         @SuppressWarnings("deprecation")
 		ArgumentParser parser = ArgumentParsers
-            .newArgumentParser("influxdb-udp-consumerr")
+            .newArgumentParser("email-consumer")
             .defaultHelp(true)
-            .description("This tool is used to send UDP packets to InfluxDB.");
-
+            .description("This tool is used to send Emails.");
         parser.addArgument("--config")
     	    .action(store())
             .required(true)
             .type(String.class)
             .dest("config")
             .help("config file");
-
         return parser;
     }
 }	
