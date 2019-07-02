@@ -1,0 +1,17 @@
+general:
+   log4jfilename: ./log4j.properties
+
+kafka_consumer_config:
+   bootstrap.servers: broker1:9092,broker2:9092,broker3:9092
+   topic: input-topic
+
+sender_config:
+   hostname: <influxdb-instance-hostname>
+   port: 8089
+
+stats_config:
+   enabled: true
+   type: influxdb
+   hostname: <infludb-instance-hostname>
+   port: 8090
+   period_ms: 10000

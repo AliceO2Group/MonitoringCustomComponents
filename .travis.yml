@@ -1,22 +1,8 @@
 sudo: false
 matrix:
   include:
-    - language: python
-      python: 2.7
-      install:
-        - cd ${TRAVIS_BUILD_DIR}/internal-monitoring
-        - pip install -r requirements.txt
-      script:
-        - cd ${TRAVIS_BUILD_DIR}/internal-monitoring/InternalMonitoring/
-        - pycodestyle --exclude=*.log *
-    - language: scala
-      scala:
-        - 2.10.6
-      script:
-        - cd ${TRAVIS_BUILD_DIR}/spark-streaming-aggregator
-        - travis_retry sbt package
     - language: java
       script:
-       - cd ${TRAVIS_BUILD_DIR}/spark-streaming-pass-through; mvn clean -e install -DskipTests
+       - cd ${TRAVIS_BUILD_DIR}/kafka-components; mvn clean -e install -DskipTests
 notifications:
   email: false
