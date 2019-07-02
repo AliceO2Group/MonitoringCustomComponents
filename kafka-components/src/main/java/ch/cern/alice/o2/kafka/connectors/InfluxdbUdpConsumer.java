@@ -103,7 +103,6 @@ public class InfluxdbUdpConsumer {
         Map<String,String> stats_config = config.getStats_config();
         String topicName = kafka_consumer_config.get("topic");
         data_endpoint_hostname = sender_config.getOrDefault("hostname",DEFAULT_HOSTNAME);
-        //data_endpoint_port = Integer.parseInt(sender_config.getOrDefault("port",DEFAULT_PORT));
         String[] data_endpoint_ports_str = sender_config.getOrDefault("port",DEFAULT_PORT).split(",");
         System.out.println(sender_config.getOrDefault("port",DEFAULT_PORT));
         System.out.println(data_endpoint_ports_str);
@@ -183,7 +182,6 @@ public class InfluxdbUdpConsumer {
 	private static void sendUdpData(byte[] data2send) {
 		try {
 			DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_endpoint_ports[(data_endpoint_ports_index++)%data_endpoint_ports_size]);
-			//if(data_endpoint_ports_index >= data_endpoint_ports_size) data_endpoint_ports_index = 0 ;
 	        datagramSocket.send(packet);
 	        sentRecords++;
 		} catch (Exception e) {
