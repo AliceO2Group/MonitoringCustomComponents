@@ -58,8 +58,8 @@ import ch.cern.alice.o2.kafka.utils.SimplePair;
 public class Dispatcher {
 	private static Logger logger = LoggerFactory.getLogger(Dispatcher.class); 
 	public static String getFastMeasurement(String meas) {
-		char [] temp = new char[50];
-		char [] ch_meas = meas.toCharArray(); 
+		char[] temp = new char[50];
+		char[] ch_meas = meas.toCharArray(); 
 		for(int i=0; i<ch_meas.length; i++){
 			if(ch_meas[i] != ',' ) {
 				temp[i] = ch_meas[i];
@@ -71,8 +71,8 @@ public class Dispatcher {
 		return new String(temp);
 	}
 	
-	public static String tripletsToString(Triplet<String, Double, String> qwe) {
-		return new String(qwe.getValue0()+","+qwe.getValue1()+","+qwe.getValue2());
+	public static String tripletsToString(Triplet<String, Double, String> t) {
+		return new String(t.getValue0()+","+t.getValue1()+","+t.getValue2());
 	}
 	
 	public static List<Triplet<String,Double,String>> getTriplets(LineProtocol lp, Map<String,SimplePair> aggr_conf){
@@ -80,7 +80,6 @@ public class Dispatcher {
 		if(aggr_conf.containsKey(meas)) {
 			String func = aggr_conf.get(meas).key;
 			String [] tags2remove = aggr_conf.get(meas).value.split(",");
-			List<Triplet<String,Double,String>> qwe = lp.dropTagKeys(tags2remove).dropNotNumberFields().getTriplets(func);
 			return lp.dropTagKeys(tags2remove).dropNotNumberFields().getTriplets(func);
 		} else {
 			return new ArrayList<Triplet<String,Double,String>>();
