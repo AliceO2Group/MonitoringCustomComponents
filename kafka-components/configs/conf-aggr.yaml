@@ -1,17 +1,15 @@
-
 general:
-   window: 30
    log4jfilename: ./log4j.properties
 
 kafka_config:
-   bootstrap_servers: aido2qc41:9092,aido2qc42:9092,aido2qc43:9092
-   stateDir: /mnt/data/Work/ownCloud/workspace/jpy_laptop/j_kafka_stream_aggregation/stateDir
-   numTheads: 1
+   bootstrap.servers: aido2qc41:9092,aido2qc42:9092,aido2qc43:9092
+   state.dir: /mnt/data/Work/ownCloud/workspace/jpy_laptop/j_kafka_stream_aggregation/stateDir
    
-topics:
-   avg: aggr-avg
-   sum: aggr-sum
-   min: aggr-min
-   max: aggr-max
-   results: aggr-results
+aggregation:
+   window_s: 30
+   topic-avg: aggr-avg
+   topic-sum: aggr-sum
+   topic-min: aggr-min
+   topic-max: aggr-max
+   topic-results: aggr-results
        

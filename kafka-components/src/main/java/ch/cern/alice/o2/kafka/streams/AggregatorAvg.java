@@ -59,6 +59,12 @@ import ch.cern.alice.o2.kafka.utils.ExtendedSerdes;
 public class AggregatorAvg {
 	private static Logger logger = LoggerFactory.getLogger(AggregatorAvg.class); 
     
+	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-aggregator-avg";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-aggregator-avg-client";
+	
+	private static String THREAD_NAME = "aggregator-avg-shutdown-hook";
+	private static String FUNCTION_NAME = "avg";
 	public static String getFastMeasurement(String meas) {
 		char [] temp = new char[50];
 		char [] ch_meas = meas.toCharArray(); 
@@ -99,23 +105,25 @@ public class AggregatorAvg {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         YamlAggregatorConfig config = mapper.readValue( new File(config_filename), YamlAggregatorConfig.class);
         
-        String avg_topic = config.getTopics().get("avg");
+        String avg_topic = config.getTopics().get(FUNCTION_NAME);
         String results_topic = config.getTopics().get("results");
         String log4jfilename = config.getGeneral().get("log4jfilename");
         long window = Long.parseLong(config.getGeneral().get("window"));
         long window_ms  = window * 1000;
         Map<String,String> kafka_config = config.getkafka_config();
+        
 
+        
         PropertyConfigurator.configure(log4jfilename);
     	Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-aggregator-avg");
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, "streams-aggregator-avg-client");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get("bootstrap_servers"));
-        props.put(StreamsConfig.STATE_DIR_CONFIG, kafka_config.get("stateDir"));
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
+        props.put(StreamsConfig.STATE_DIR_CONFIG, kafka_config.get(StreamsConfig.STATE_DIR_CONFIG));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Integer.parseInt(kafka_config.getOrDefault("numTheads", "1")));
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
         
         final StreamsBuilder builder = new StreamsBuilder();
         try {
@@ -126,7 +134,7 @@ public class AggregatorAvg {
     				.windowedBy(TimeWindows.of(Duration.ofSeconds(window)))
     				.reduce((v1,v2) -> v1.add(v2) )
     				.toStream()
-    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value.getAverage(),"avg"))); 
+    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value.getAverage(),FUNCTION_NAME))); 
         	avg_aggr_stream.to(results_topic);
         } catch (Exception e) {
         	e.printStackTrace();
@@ -138,7 +146,7 @@ public class AggregatorAvg {
         final CountDownLatch latch = new CountDownLatch(10);
  
         // attach shutdown handler to catch control-c
-        Runtime.getRuntime().addShutdownHook(new Thread("aggregator-avg-shutdown-hook") {
+        Runtime.getRuntime().addShutdownHook(new Thread(THREAD_NAME) {
             @Override
             public void run() {
                 streams.close();
