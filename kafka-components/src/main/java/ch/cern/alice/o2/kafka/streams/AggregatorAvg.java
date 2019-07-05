@@ -105,7 +105,7 @@ public class AggregatorAvg {
 	}
 	
 	public static void main(String[] args) throws Exception {
-
+        
         /* Parse command line argumets */
     	ArgumentParser parser = argParser();
         Namespace res = parser.parseArgs(args);

@@ -208,7 +208,7 @@ public class EmailConsumer {
             for (ConsumerRecord<byte[], byte[]> record : consumerRecords) {
             	emailer.sendEmail(new String(record.value()));
             }
-        }
+		}
 	}
 	
 	private static void stats() throws IOException {

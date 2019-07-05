@@ -1,16 +1,16 @@
 general:
    log4jfilename: ./log4j.properties
 
-input_topic: test3p2r
-output_avg_topic: aggr-avg
-output_sum_topic: aggr-sum
-output_min_topic: aggr-min
-output_max_topic: aggr-max
-output_other_topic: aggr-other
+topics:
+   input: test3p2r
+   output.avg: aggr-avg
+   output.sum: aggr-sum
+   output.min: aggr-min
+   output.max: aggr-max
+   output.default: aggr-other
 
 kafka_config:
-   bootstrap_servers: aido2qc41:9092,aido2qc42:9092,aido2qc43:9092
-   numTheads: 1
+   bootstrap.servers: aido2qc41:9092,aido2qc42:9092,aido2qc43:9092
    
 selection:
    avg:

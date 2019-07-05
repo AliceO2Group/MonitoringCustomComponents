@@ -25,9 +25,8 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Windowed;
-
-
 import org.apache.kafka.streams.KeyValue;
+
 import org.apache.log4j.PropertyConfigurator;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
@@ -49,6 +48,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import ch.cern.alice.o2.kafka.utils.YamlDispatcherConfig;
 import ch.cern.alice.o2.kafka.utils.LineProtocol;
@@ -56,9 +56,32 @@ import ch.cern.alice.o2.kafka.utils.SimplePair;
 
 public class Dispatcher {
 	private static Logger logger = LoggerFactory.getLogger(Dispatcher.class); 
-	public static String getFastMeasurement(String meas) {
+    
+    private static String ARGPARSE_CONFIG = "config";
+    private static String GENERAL_LOGFILENAME_CONFIG = "log4jfilename";
+    private static String TOPICS_INPUT_CONFIG = "input";
+    private static String TOPICS_OUTPUT_AVG_CONFIG = "topic.avg";
+	private static String TOPICS_OUTPUT_SUM_CONFIG = "topic.sum";
+	private static String TOPICS_OUTPUT_MIN_CONFIG = "topic.min";
+	private static String TOPICS_OUTPUT_MAX_CONFIG = "topic.max";
+	private static String TOPICS_OUTPUT_DEFAULT_CONFIG = "topic.default";
+	private static String SELECTION_MEASUREMENT_CONFIG = "measurement";
+	private static String SELECTION_TAG_TO_REMOVE_CONFIG = "tag_to_remove";
+
+	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-dispatcher";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-dispatcher-client";
+
+	private static String FUNCTION_AVG = "avg";
+	private static String FUNCTION_SUM = "sum";
+	private static String FUNCTION_MIN = "min";
+	private static String FUNCTION_MAX = "max";
+
+	private static String THREAD_NAME = "dispatcher-shutdown-hook";
+
+	public static String getFastMeasurement(String lp) {
 		char[] temp = new char[50];
-		char[] ch_meas = meas.toCharArray(); 
+		char[] ch_meas = lp.toCharArray(); 
 		for(int i=0; i<ch_meas.length; i++){
 			if(ch_meas[i] != ',' ) {
 				temp[i] = ch_meas[i];
@@ -81,7 +104,10 @@ public class Dispatcher {
 			String [] tags2remove = aggr_conf.get(meas).value.split(",");
 			return lp.dropTagKeys(tags2remove).dropNotNumberFields().getTriplets(func);
 		} else {
-			return new ArrayList<Triplet<String,Double,String>>();
+			/* The measurement must not be aggregated */
+			List<Triplet<String,Double,String>> l = new ArrayList<Triplet<String,Double,String>>();
+			l.add(new Triplet<String,Double,String>(lp.toLineProtocol(TimeUnit.NANOSECONDS),new Double(0),""));
+			return l;
 		}
 	}
 	public static String getLineProtocol(Windowed<String> key, Double value, String op) {
@@ -90,30 +116,37 @@ public class Dispatcher {
 	}
 	
 	public static void main(String[] args) throws Exception {
+    	
+        /* Parse command line argumets */
     	ArgumentParser parser = argParser();
         Namespace res = parser.parseArgs(args);
-        String config_filename = res.getString("config");
+        String config_filename = res.getString(ARGPARSE_CONFIG);
+        
+        /* Parse yaml configuration file */
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         YamlDispatcherConfig config = mapper.readValue( new File(config_filename), YamlDispatcherConfig.class);
         
-        String input_topic = config.getInput_topic();
-        String output_avg_topic = config.getOutput_avg_topic();
-        String output_sum_topic = config.getOutput_sum_topic();
-        String output_min_topic = config.getOutput_min_topic();
-        String output_max_topic = config.getOutput_max_topic();
-        //String output_other_topic = config.getOutput_other_topic();
-        String log4jfilename = config.getGeneral().get("log4jfilename");
+		String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
+        PropertyConfigurator.configure(log4jfilename);
+
+		Map<String,String> topics = config.getTopics();
+		String input_topic = topics.get(TOPICS_INPUT_CONFIG);
+		String output_avg_topic = topics.get(TOPICS_OUTPUT_AVG_CONFIG);
+		String output_sum_topic = topics.get(TOPICS_OUTPUT_SUM_CONFIG);
+		String output_min_topic = topics.get(TOPICS_OUTPUT_MIN_CONFIG);
+		String output_max_topic = topics.get(TOPICS_OUTPUT_MAX_CONFIG);
+		String output_default_topic = topics.get(TOPICS_OUTPUT_DEFAULT_CONFIG);
+
         Map<String,String> kafka_config = config.getkafka_config();
         Map<String,Map<String,String>[]> aggregators = config.getSelection();
         
-        PropertyConfigurator.configure(log4jfilename);
-    	Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-dispatcher");
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, "streams-dispatcher-client");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get("bootstrap_servers"));
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Integer.parseInt(kafka_config.getOrDefault("numTheads", "1")));
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
         
         final Serde<String> stringSerde = Serdes.String();
         final Serde<Double> doubleSerde = Serdes.Double();
@@ -126,9 +159,9 @@ public class Dispatcher {
         // {measurement: (func,tags2remove)}
         for(Map.Entry<String, Map<String,String>[]> entry: aggregators.entrySet()) {
         	for(Map<String,String> item: entry.getValue()) {
-        		meas = item.get("measurement");
+        		meas = item.get(SELECTION_MEASUREMENT_CONFIG);
         		func = entry.getKey();
-        		tags2rem = item.getOrDefault("tag_to_remove", "").replaceAll(" ", "");
+        		tags2rem = item.getOrDefault(SELECTION_TAG_TO_REMOVE_CONFIG, "").replaceAll(" ", "");
         		aggr_conf.put(meas, new SimplePair(func,tags2rem));
         	}
         }
@@ -156,10 +189,11 @@ public class Dispatcher {
 	        
 	        @SuppressWarnings("unchecked")
 			KStream<String,Triplet<String, Double, String>> branches[] = triplets_data.branch(
-	        		(key,value) -> value.getValue2().equals("avg"),
-	        		(key,value) -> value.getValue2().equals("sum"),
-	        		(key,value) -> value.getValue2().equals("min"),
-	        		(key,value) -> value.getValue2().equals("max")
+	        		(key,value) -> value.getValue2().equals(FUNCTION_AVG),
+	        		(key,value) -> value.getValue2().equals(FUNCTION_SUM),
+	        		(key,value) -> value.getValue2().equals(FUNCTION_MIN),
+					(key,value) -> value.getValue2().equals(FUNCTION_MAX),
+					(key,value) -> true
 	        		);
 	        
 	        branches[0]
@@ -174,7 +208,9 @@ public class Dispatcher {
 	        branches[3]
 	        		.map((key,value) -> new KeyValue<String,Double>(value.getValue0(),value.getValue1()))
 	        		.to(output_max_topic, Produced.with(stringSerde, doubleSerde));
-	        //branches[4].to(output_other_topic);
+			branches[4]
+					.mapValues(value -> value.getValue0())
+					.to(output_default_topic);
         } catch (Exception e) {
         	e.printStackTrace();
         }
@@ -188,7 +224,7 @@ public class Dispatcher {
         final CountDownLatch latch = new CountDownLatch(1);
  
         // attach shutdown handler to catch control-c
-        Runtime.getRuntime().addShutdownHook(new Thread("aggregator-shutdown-hook") {
+        Runtime.getRuntime().addShutdownHook(new Thread(THREAD_NAME) {
             @Override
             public void run() {
                 streams.close();
@@ -208,9 +244,9 @@ public class Dispatcher {
     private static ArgumentParser argParser() {
         @SuppressWarnings("deprecation")
 		ArgumentParser parser = ArgumentParsers
-            .newArgumentParser("kafka-stream-aggregator")
+            .newArgumentParser("kafka-stream-dispatcher")
             .defaultHelp(true)
-            .description("This tool is used to aggregate kafka messages from a specific topic.");
+            .description("This tool is used to dispatch kafka messages among topics.");
 
         parser.addArgument("--config")
     	    .action(store())
@@ -221,4 +257,4 @@ public class Dispatcher {
 
         return parser;
     }
-}	
+}
