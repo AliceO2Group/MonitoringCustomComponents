@@ -59,6 +59,12 @@ import ch.cern.alice.o2.kafka.utils.ExtendedSerdes;
 public class AggregatorAvg {
 	private static Logger logger = LoggerFactory.getLogger(AggregatorAvg.class); 
     
+    private static String ARGPARSE_CONFIG = "config";
+    private static String GENERAL_LOGFILENAME_CONFIG = "log4jfilename";
+    private static String AGGREGATION_WINDOW_S_CONFIG = "window_s";
+    private static String AGGREGATION_TOPIC_INPUT_CONFIG = "topic.input";
+    private static String AGGREGATION_TOPIC_OUTPUT_CONFIG = "topic.output";
+
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
 	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-aggregator-avg";
 	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-aggregator-avg-client";
@@ -99,22 +105,26 @@ public class AggregatorAvg {
 	}
 	
 	public static void main(String[] args) throws Exception {
+
+        /* Parse command line argumets */
     	ArgumentParser parser = argParser();
         Namespace res = parser.parseArgs(args);
-        String config_filename = res.getString("config");
+        String config_filename = res.getString(ARGPARSE_CONFIG);
+
+        /* Parse yaml configuration file */
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         YamlAggregatorConfig config = mapper.readValue( new File(config_filename), YamlAggregatorConfig.class);
         
-        String avg_topic = config.getTopics().get(FUNCTION_NAME);
-        String results_topic = config.getTopics().get("results");
-        String log4jfilename = config.getGeneral().get("log4jfilename");
-        long window = Long.parseLong(config.getGeneral().get("window"));
-        long window_ms  = window * 1000;
-        Map<String,String> kafka_config = config.getkafka_config();
-        
-
-        
+        String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
         PropertyConfigurator.configure(log4jfilename);
+
+        Map<String,String> kafka_config = config.getkafka_config();
+        Map<String,String> aggregation_config = config.getAggregation_config();
+        String input_topic = aggregation_config.get(AGGREGATION_TOPIC_INPUT_CONFIG);
+        String output_topic = aggregation_config.get(AGGREGATION_TOPIC_OUTPUT_CONFIG);
+        long window_s = Long.parseLong(aggregation_config.get(AGGREGATION_WINDOW_S_CONFIG));
+        long window_ms = window_s * 1000;
+
     	Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
         props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
@@ -127,15 +137,15 @@ public class AggregatorAvg {
         
         final StreamsBuilder builder = new StreamsBuilder();
         try {
-        	KStream<String, Double> avg_data = builder.stream(avg_topic, Consumed.with(Serdes.String(), Serdes.Double()));
+        	KStream<String, Double> avg_data = builder.stream(input_topic, Consumed.with(Serdes.String(), Serdes.Double()));
         	KStream<String, String> avg_aggr_stream = avg_data
             		.mapValues( (key,value) -> new AvgPair(value,1) )
             		.groupByKey(Grouped.with(Serdes.String(), ExtendedSerdes.AvgPair() ))
-    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window)))
+    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window_s)))
     				.reduce((v1,v2) -> v1.add(v2) )
     				.toStream()
     				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value.getAverage(),FUNCTION_NAME))); 
-        	avg_aggr_stream.to(results_topic);
+        	avg_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
         }

@@ -49,7 +49,6 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import ch.cern.alice.o2.kafka.utils.YamlDispatcherConfig;
 import ch.cern.alice.o2.kafka.utils.LineProtocol;

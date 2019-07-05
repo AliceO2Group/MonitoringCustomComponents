@@ -237,4 +237,3 @@ Tab. 3
 | *stats*  | *hostname* | No | Endpoint hostname | 
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
-

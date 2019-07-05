@@ -4,9 +4,8 @@ import java.util.Map;
 
 public class YamlAggregatorConfig{
 		private Map<String,String> general;
-		private Map<String,String> topics;
 		private Map<String,String> kafka_config;
-		private Map<String,Map<String,String>[]> aggregators;
+		private Map<String,String> aggregation_config;
 		
 		public YamlAggregatorConfig() { }
 		
@@ -18,14 +17,6 @@ public class YamlAggregatorConfig{
 			general = new_gen;
 		}
 		
-		public Map<String,String> getTopics(){
-			return topics;
-		}
-		
-		public void setTopics(Map<String,String> k_topics) {
-			topics = k_topics;
-		}
-		
 		public Map<String,String> getkafka_config(){
 			return kafka_config;
 		}
@@ -34,11 +25,11 @@ public class YamlAggregatorConfig{
 			kafka_config = k_config;
 		}
 		
-		public Map<String,Map<String,String>[]> getAggregators(){
-			return aggregators;
+		public Map<String,String> getAggregation_config(){
+			return aggregation_config;
 		}
 		
-		public void setAggregators(Map<String,Map<String,String>[]> aggr) {
-			aggregators = aggr;
+		public void setAggregators(Map<String,String> aggr) {
+			aggregation_config = aggr;
 		}
 }

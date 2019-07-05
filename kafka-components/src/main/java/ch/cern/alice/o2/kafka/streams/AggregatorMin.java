@@ -57,6 +57,19 @@ import ch.cern.alice.o2.kafka.utils.YamlAggregatorConfig;
 public class AggregatorMin {
 	
 	private static Logger logger = LoggerFactory.getLogger(AggregatorMin.class); 
+        
+    private static String ARGPARSE_CONFIG = "config";
+    private static String GENERAL_LOGFILENAME_CONFIG = "log4jfilename";
+    private static String AGGREGATION_WINDOW_S_CONFIG = "window_s";
+    private static String AGGREGATION_TOPIC_INPUT_CONFIG = "topic.input";
+    private static String AGGREGATION_TOPIC_OUTPUT_CONFIG = "topic.output";
+
+	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-aggregator-avg";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-aggregator-avg-client";
+	
+	private static String THREAD_NAME = "aggregator-min-shutdown-hook";
+    private static String FUNCTION_NAME = "min";
     
 	public static String getFastMeasurement(String meas) {
 		char [] temp = new char[50];
@@ -92,40 +105,46 @@ public class AggregatorMin {
 	}
 	
 	public static void main(String[] args) throws Exception {
+
+        /* Parse command line argumets */
     	ArgumentParser parser = argParser();
         Namespace res = parser.parseArgs(args);
-        String config_filename = res.getString("config");
+        String config_filename = res.getString(ARGPARSE_CONFIG);
+
+        /* Parse yaml configuration file */
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         YamlAggregatorConfig config = mapper.readValue( new File(config_filename), YamlAggregatorConfig.class);
         
-        String min_topic = config.getTopics().get("min");
-        String results_topic = config.getTopics().get("results");
-        String log4jfilename = config.getGeneral().get("log4jfilename");
-        long window = Long.parseLong(config.getGeneral().get("window"));
-        long window_ms  = window * 1000;
-        Map<String,String> kafka_config = config.getkafka_config();
-
+        String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
         PropertyConfigurator.configure(log4jfilename);
+
+        Map<String,String> kafka_config = config.getkafka_config();
+        Map<String,String> aggregation_config = config.getAggregation_config();
+        String input_topic = aggregation_config.get(AGGREGATION_TOPIC_INPUT_CONFIG);
+        String output_topic = aggregation_config.get(AGGREGATION_TOPIC_OUTPUT_CONFIG);
+        long window_s = Long.parseLong(aggregation_config.get(AGGREGATION_WINDOW_S_CONFIG));
+        long window_ms = window_s * 1000;
+
     	Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-aggregator-min");
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, "streams-aggregator-min-client");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get("bootstrap_servers"));
-        props.put(StreamsConfig.STATE_DIR_CONFIG, kafka_config.get("stateDir"));
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
+        props.put(StreamsConfig.STATE_DIR_CONFIG, kafka_config.get(StreamsConfig.STATE_DIR_CONFIG));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Integer.parseInt(kafka_config.getOrDefault("numTheads", "1")));
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
         
         final StreamsBuilder builder = new StreamsBuilder();
         try {
-        	KStream<String, Double> min_data = builder.stream(min_topic, Consumed.with(Serdes.String(), Serdes.Double()));
+        	KStream<String, Double> min_data = builder.stream(input_topic, Consumed.with(Serdes.String(), Serdes.Double()));
         	KStream<String, String> min_aggr_stream = min_data
             		.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
-    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window)))
+    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window_s)))
     				.reduce((v1,v2) -> v1 < v2 ? v1 : v2 )
     				.toStream()
-    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value,"min")));
-        	min_aggr_stream.to(results_topic);
+    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value,FUNCTION_NAME)));
+        	min_aggr_stream.to(output_topic);
 		} catch (Exception e) {
 	    	e.printStackTrace();
 	    }
@@ -136,7 +155,7 @@ public class AggregatorMin {
         final CountDownLatch latch = new CountDownLatch(1);
  
         // attach shutdown handler to catch control-c
-        Runtime.getRuntime().addShutdownHook(new Thread("aggregator-min-shutdown-hook") {
+        Runtime.getRuntime().addShutdownHook(new Thread(THREAD_NAME) {
             @Override
             public void run() {
                 streams.close();

@@ -1,5 +1,5 @@
 general:
-   log4jfilename: ./log4j.properties
+   log4jfilename: ./log4j-aggr.properties
 
 kafka_config:
    bootstrap.servers: aido2qc41:9092,aido2qc42:9092,aido2qc43:9092
@@ -7,9 +7,6 @@ kafka_config:
    
 aggregation:
    window_s: 30
-   topic-avg: aggr-avg
-   topic-sum: aggr-sum
-   topic-min: aggr-min
-   topic-max: aggr-max
-   topic-results: aggr-results
+   topic.input: aggr-avg
+   topic.results: aggr-results
        
