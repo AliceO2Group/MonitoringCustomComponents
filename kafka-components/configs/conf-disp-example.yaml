@@ -1,0 +1,31 @@
+general:
+   log4jfilename: ./log4j-dispatcher.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   
+selection:
+   avg:
+      -   measurement: meas0
+          removetags: hostname,cardid
+      -   measurement: meas1
+          removetags: hostname,cardid        
+   min:
+      -   measurement: meas2
+          removetags: hostname,cardid
+      -   measurement: meas3
+          removetags: hostname,cardid         
+   max:
+      -   measurement: meas4
+          removetags: hostname,cardid    
+   sum:
+      -   measurement: meas5
+          removetags: hostname,cardid
+
+topics:
+   input: <input-topic>
+   output.avg: <avg-topic>
+   output.sum: <sum-topic>
+   output.min: <min-topic>
+   output.max: <max-topic>
+   output.default: <default-topic>

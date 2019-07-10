@@ -1,0 +1,12 @@
+general:
+   log4jfilename: ./log4j-aggr.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   state.dir: <path-to-the-state-directory>
+   
+aggregation_config:
+   window_s: <window-in-seconds>
+   topic.input: <input-topic>
+   topic.results: <output-topic>
+       

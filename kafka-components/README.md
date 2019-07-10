@@ -3,10 +3,14 @@
 # Kafka components
 This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and cosume metrics. 
 
-Functional components:
+Consumer components:
 - [InfluxDB UDP Consumer](#influxdb-udp-consumer)
 - [Mattermost Consumer](#mattermost-consumer)
 - [Email Consumer](#email-Consumer)
+
+[Aggregation components](#aggregation-cComponents):
+- [Dispatcher](#dispatcher-component)
+- [Aggregator](#aggregator-component)
 
 ### Dependencies
 - Java > 1.8
@@ -21,9 +25,10 @@ Functional components:
  mvn clean -e install -DskipTests 
 ```
 
-The generated jar (`target/o2-kafka-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
+The generated jar (`target/kafka-streams-o2-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
-## Components
+## Consumer Components
+The consumer components retrieve messages from the Kafka cluster and forwawd them to a specific external component.
 
 ### InfluxDB UDP Consumer
 This component retrieves messages from the Kafka cluster and forward them to an InfluxDB instance. 
@@ -34,7 +39,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer can started using the following command:
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
  ch.cern.alice.o2.kafka.connectors.InfluxdbUdpConsumer \
  --config conf-influxdb-udp.yaml
 ```
@@ -114,7 +119,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.MattermostConsumer  \
   --config conf-mattermost.yaml
 ```
@@ -182,7 +187,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.EmailConsumer  \
   --config conf-email.yaml
 ```
@@ -237,3 +242,146 @@ Tab. 3
 | *stats*  | *hostname* | No | Endpoint hostname | 
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
+
+
+## Aggregation Components
+The components allow the aggregation of messages retrieved from the Kafka cluster using the following functions:
+- average
+- sum
+- minimum
+- maximum
+
+Each aggregation function requires a dedicated topic for the processing.
+The Dispatcher component forwards messages towards these topics and the Aggregator components process the values contained in the related topic in order to obatin the aggregated values.
+The results are sent to a topic formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
+
+
+### Dispatcher Component
+This component forwards messages towards specific topics following rules descrived in a configuration file.
+
+#### Command
+The consumer is execute using the following command
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.Dispatcher \
+  --config conf-disp.yaml
+```
+
+#### Configuration file 
+A configuration file example is
+
+```
+general:
+   log4jfilename: ./log4j-dispatcher.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+
+topics:
+   input: <input-topic>
+   topic.avg: <avg-topic>
+   topic.sum: <sum-topic>
+   topic.min: <min-topic>
+   topic.max: <max-topic>
+   topic.default: <default-topic>
+   
+selection:
+   topic.avg:
+      -   measurement: meas0
+          removetags: hostname,cardid
+      -   measurement: meas1
+          removetags: hostname,cardid        
+   topic.min:
+      -   measurement: meas2
+          removetags: hostname,cardid
+      -   measurement: meas3
+          removetags: hostname,cardid         
+   topic.max:
+      -   measurement: meas4
+          removetags: hostname,cardid    
+   topic.sum:
+      -   measurement: meas5
+          removetags: hostname,cardid
+```
+
+Tab. 4
+
+| Section | First Keyword | Mandatory | Description | Default value |
+| --------| --------------| ----------| ----------- | ------------- |
+| *general* | -          | Yes    | Defines the start of 'general' configuration section | - |
+| *general* | *log4jfilename* | Yes | Log configuration filename | - |
+| *kafka_config* | - | Yes | Defines the start of 'kafka_consumer' configuration section | - |
+| *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
+| *topics* | - | Yes | Defines the start of 'topic' configuration section | 
+| *topics* | *input* | Yes | Topic where retrieve messages | 
+| *topics*  | *topic.avg* | Yes | Topic where all measurement typed under the selection/avg section are forwarded to  | 
+| *topics*  | *topic.sum*   | Yes | Topic where all measurement typed under the selection/sum section are forwarded to |
+| *topics*  | *topic.min* | Yes | Topic where all measurement typed under the selection/min section are forwarded to |
+| *topics*  | *topic.max*   | Yes | Topic where all measurement typed under the selection/max section are forwarded to |
+| *topics*  | *topic.default* | Yes | Topic where all remaining measurements are forwarded to |
+| *selection* | - | Yes | Defines the start of 'selection' configuration section | 
+| *selection* | *topic.<avg|min|max|sum>* | No | Defines the section related to the selected topic (e.g. avg,min,...) | 
+| *selection* | *measurement* | Yes | Measurement name to forward to the specific topic | 
+| *selection* | *removetags* | Yes | Tags to remove during the aggregation phase | 
+
+
+### Aggregator Component
+This component execute a specific aggregation function on messages belongin to the dedicated topic.
+
+#### Command
+The consumer is execute using the following command
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorAvg \
+  --config conf-aggr-avg.yaml
+```
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorSum \
+  --config conf-aggr-sum.yaml
+```
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorMin \
+  --config conf-aggr-min.yaml
+```
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorMax \
+  --config conf-aggr-max.yaml
+```
+
+#### Configuration file 
+A configuration file example is
+
+```
+general:
+   log4jfilename: ./log4j-aggr.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   state.dir: <path-to-the-state-directory>
+   
+aggregation_config:
+   window_s: <window-in-seconds>
+   topic.input: <input-topic>
+   topic.output: <output-topic>
+```
+
+Tab. 4
+
+| Section | First Keyword | Mandatory | Description | Default value |
+| --------| --------------| ----------| ----------- | ------------- |
+| *general* | -          | Yes    | Defines the start of 'general' configuration section | - |
+| *general* | *log4jfilename* | Yes | Log configuration filename | - |
+| *kafka_config* | - | Yes | Defines the start of 'kafka_consumer' configuration section | - |
+| *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
+| *aggregation_config* | - | Yes | Defines the start of 'aggregation_config' configuration section | 
+| *aggregation_config* | *window_s* | Yes | Window time in seconds | 
+| *aggregation_config*  | *topic.input* | Yes | Topic where retrieve messages | 
+| *aggregation_config*  | *topic.output* | Yes | Topic where sent the aggregate values |
