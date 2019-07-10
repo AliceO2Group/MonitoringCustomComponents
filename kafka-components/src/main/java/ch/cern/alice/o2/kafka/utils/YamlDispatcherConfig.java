@@ -31,7 +31,7 @@ public class YamlDispatcherConfig{
 		}
 		
 		public void setTopics(Map<String,String> new_topics) {
-			kafka_config = new_topics;
+			topics = new_topics;
 		}
 
 		public Map<String,Map<String,String>[]> getSelection(){

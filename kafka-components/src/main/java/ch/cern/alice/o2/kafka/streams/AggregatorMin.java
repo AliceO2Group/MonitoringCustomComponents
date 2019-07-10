@@ -23,6 +23,8 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Suppressed;
+import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.kstream.Grouped;
@@ -65,8 +67,8 @@ public class AggregatorMin {
     private static String AGGREGATION_TOPIC_OUTPUT_CONFIG = "topic.output";
 
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
-	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-aggregator-avg";
-	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-aggregator-avg-client";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-aggregator-min";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-aggregator-min-client";
 	
 	private static String THREAD_NAME = "aggregator-min-shutdown-hook";
     private static String FUNCTION_NAME = "min";
@@ -124,6 +126,11 @@ public class AggregatorMin {
         String output_topic = aggregation_config.get(AGGREGATION_TOPIC_OUTPUT_CONFIG);
         long window_s = Long.parseLong(aggregation_config.get(AGGREGATION_WINDOW_S_CONFIG));
         long window_ms = window_s * 1000;
+        long grace_duration_s = 10;
+
+        logger.info("aggregation.window_s: " + window_s);
+        logger.info("aggregation.topic.input: " + input_topic);
+        logger.info("aggregation.topic.output: " + output_topic);
 
     	Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
@@ -140,8 +147,9 @@ public class AggregatorMin {
         	KStream<String, Double> min_data = builder.stream(input_topic, Consumed.with(Serdes.String(), Serdes.Double()));
         	KStream<String, String> min_aggr_stream = min_data
             		.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
-    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window_s)))
-    				.reduce((v1,v2) -> v1 < v2 ? v1 : v2 )
+    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window_s)).grace(Duration.ofSeconds(grace_duration_s)))
+                    .reduce((v1,v2) -> v1 < v2 ? v1 : v2 )
+                    .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
     				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value,FUNCTION_NAME)));
         	min_aggr_stream.to(output_topic);
@@ -167,6 +175,8 @@ public class AggregatorMin {
             streams.start();
             latch.await();
         } catch (Throwable e) {
+            e.printStackTrace();
+            logger.error(e.getMessage(),e);
             System.exit(1);
         }
         System.exit(0);

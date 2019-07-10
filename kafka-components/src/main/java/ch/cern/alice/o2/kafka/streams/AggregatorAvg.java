@@ -26,7 +26,8 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.kstream.Grouped;
-
+import org.apache.kafka.streams.kstream.Suppressed;
+import org.apache.kafka.streams.kstream.Suppressed.BufferConfig;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.log4j.PropertyConfigurator;
 import org.javatuples.Triplet;
@@ -124,6 +125,11 @@ public class AggregatorAvg {
         String output_topic = aggregation_config.get(AGGREGATION_TOPIC_OUTPUT_CONFIG);
         long window_s = Long.parseLong(aggregation_config.get(AGGREGATION_WINDOW_S_CONFIG));
         long window_ms = window_s * 1000;
+        long grace_duration_s = 10;
+        
+        logger.info("aggregation.window_s: " + window_s);
+        logger.info("aggregation.topic.input: " + input_topic);
+        logger.info("aggregation.topic.output: " + output_topic);
 
     	Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
@@ -141,8 +147,9 @@ public class AggregatorAvg {
         	KStream<String, String> avg_aggr_stream = avg_data
             		.mapValues( (key,value) -> new AvgPair(value,1) )
             		.groupByKey(Grouped.with(Serdes.String(), ExtendedSerdes.AvgPair() ))
-    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window_s)))
-    				.reduce((v1,v2) -> v1.add(v2) )
+    				.windowedBy(TimeWindows.of(Duration.ofSeconds(window_s)).grace(Duration.ofSeconds(grace_duration_s)))
+                    .reduce((v1,v2) -> v1.add(v2) )
+                    .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
     				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value.getAverage(),FUNCTION_NAME))); 
         	avg_aggr_stream.to(output_topic);
@@ -167,6 +174,8 @@ public class AggregatorAvg {
             streams.start();
             latch.await();
         } catch (Throwable e) {
+            e.printStackTrace();
+            logger.error(e.getMessage(),e);
             System.exit(1);
         }
         System.exit(0);

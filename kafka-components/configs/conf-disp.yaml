@@ -15,17 +15,17 @@ kafka_config:
 selection:
    avg:
       -   measurement: meas0
-          tag_to_remove: hostname,cardid
+          removetags: hostname,cardid
       -   measurement: meas1
-          tag_to_remove: hostname,cardid        
+          removetags: hostname,cardid        
    min:
       -   measurement: meas2
-          tag_to_remove: hostname,cardid
+          removetags: hostname,cardid
       -   measurement: meas3
-          tag_to_remove: hostname,cardid         
+          removetags: hostname,cardid         
    max:
       -   measurement: meas4
-          tag_to_remove: hostname,cardid    
+          removetags: hostname,cardid    
    sum:
       -   measurement: meas5
-          tag_to_remove: hostname,cardid
+          removetags: hostname,cardid

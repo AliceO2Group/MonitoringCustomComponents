@@ -24,7 +24,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.KeyValue;
 
 import org.apache.log4j.PropertyConfigurator;
@@ -60,13 +59,13 @@ public class Dispatcher {
     private static String ARGPARSE_CONFIG = "config";
     private static String GENERAL_LOGFILENAME_CONFIG = "log4jfilename";
     private static String TOPICS_INPUT_CONFIG = "input";
-    private static String TOPICS_OUTPUT_AVG_CONFIG = "topic.avg";
-	private static String TOPICS_OUTPUT_SUM_CONFIG = "topic.sum";
-	private static String TOPICS_OUTPUT_MIN_CONFIG = "topic.min";
-	private static String TOPICS_OUTPUT_MAX_CONFIG = "topic.max";
-	private static String TOPICS_OUTPUT_DEFAULT_CONFIG = "topic.default";
+    private static String TOPICS_OUTPUT_AVG_CONFIG = "output.avg";
+	private static String TOPICS_OUTPUT_SUM_CONFIG = "output.sum";
+	private static String TOPICS_OUTPUT_MIN_CONFIG = "output.min";
+	private static String TOPICS_OUTPUT_MAX_CONFIG = "output.max";
+	private static String TOPICS_OUTPUT_DEFAULT_CONFIG = "output.default";
 	private static String SELECTION_MEASUREMENT_CONFIG = "measurement";
-	private static String SELECTION_TAG_TO_REMOVE_CONFIG = "tag_to_remove";
+	private static String SELECTION_TAG_TO_REMOVE_CONFIG = "removetags";
 
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
 	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-dispatcher";
@@ -110,10 +109,6 @@ public class Dispatcher {
 			return l;
 		}
 	}
-	public static String getLineProtocol(Windowed<String> key, Double value, String op) {
-		String lp = key.key().replace("|", " ")+"_"+op+"="+value.toString()+" "+key.window().end()+"000000";
-		return lp;
-	}
 	
 	public static void main(String[] args) throws Exception {
     	
@@ -125,7 +120,8 @@ public class Dispatcher {
         /* Parse yaml configuration file */
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         YamlDispatcherConfig config = mapper.readValue( new File(config_filename), YamlDispatcherConfig.class);
-        
+		
+		/* Logger configuration */
 		String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
         PropertyConfigurator.configure(log4jfilename);
 
@@ -136,6 +132,14 @@ public class Dispatcher {
 		String output_min_topic = topics.get(TOPICS_OUTPUT_MIN_CONFIG);
 		String output_max_topic = topics.get(TOPICS_OUTPUT_MAX_CONFIG);
 		String output_default_topic = topics.get(TOPICS_OUTPUT_DEFAULT_CONFIG);
+
+		logger.info("topic.input: " + input_topic);
+		logger.info("topic.output.avg: " + output_avg_topic);
+		logger.info("topic.output.sum: " + output_sum_topic);
+		logger.info("topic.output.min: " + output_min_topic);
+		logger.info("topic.output.max: " + output_max_topic);
+		logger.info("topic.output.default: " + output_default_topic);
+
 
         Map<String,String> kafka_config = config.getkafka_config();
         Map<String,Map<String,String>[]> aggregators = config.getSelection();
@@ -165,7 +169,8 @@ public class Dispatcher {
         		aggr_conf.put(meas, new SimplePair(func,tags2rem));
         	}
         }
-        
+		
+		// Print the aggregation configuration
         for(Map.Entry<String, SimplePair> item: aggr_conf.entrySet()) {
         	System.out.println(item.getKey() + " = " + item.getValue());
         }
@@ -173,6 +178,7 @@ public class Dispatcher {
         final StreamsBuilder builder = new StreamsBuilder();
         try {
 	        KStream<String, String> source = builder.stream(input_topic);
+			
 	        KStream<String,LineProtocol> lp_data = source.mapValues( 
 	        		value -> {
 	        			LineProtocol result = new LineProtocol();
@@ -187,7 +193,9 @@ public class Dispatcher {
 	        KStream<String,Triplet<String, Double, String>> triplets_data = lp_data
 	        		.flatMapValues(value -> getTriplets(value,aggr_conf));
 	        
-	        @SuppressWarnings("unchecked")
+			//triplets_data.mapValues( value -> tripletsToString(value)).to("gra3");
+
+			@SuppressWarnings("unchecked")
 			KStream<String,Triplet<String, Double, String>> branches[] = triplets_data.branch(
 	        		(key,value) -> value.getValue2().equals(FUNCTION_AVG),
 	        		(key,value) -> value.getValue2().equals(FUNCTION_SUM),
