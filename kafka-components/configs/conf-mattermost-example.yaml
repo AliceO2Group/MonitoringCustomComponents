@@ -1,16 +1,15 @@
 general:
-   log4jfilename: ./log4j.properties
+   log4jfilename: ./log4j-mattermost-consumer.properties
 
 kafka_consumer_config:
-   bootstrap.servers: broker1:9092,broker2:9092,broker3:9092
-   topic: notifications
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   topic: notification-topic
 
-mattermost_config:
+mattermostr_config:
    url: https://<mattermost-server-hostname>/hooks/<token-id>
-   
+
 stats_config:
    enabled: true
-   type: influxdb
-   hostname: <influxdb-instance-hostname>
-   port: 8090
-   period_ms: 10000   
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>

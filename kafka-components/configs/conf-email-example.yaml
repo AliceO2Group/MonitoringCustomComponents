@@ -1,9 +1,9 @@
 general:
-   log4jfilename: ./log4j-email.properties
+   log4jfilename: ./log4j-email-consumer.properties
 
 kafka_consumer_config:
-   bootstrap.servers: broker1:9092,broker2:9092,broker3:9092
-   topic: emailtopic
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   topic: email-topic
 
 email_config:
    hostname: <smtp-server>
@@ -13,6 +13,7 @@ email_config:
    password: <password>
 
 stats_config:
-   hostname: <influxdb-hostname>
-   port: <influxdb-udp-port>
-   period_ms: 10000
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <infludb-udp-port>
+   period_ms: <sample-period-in-milliseconds>
