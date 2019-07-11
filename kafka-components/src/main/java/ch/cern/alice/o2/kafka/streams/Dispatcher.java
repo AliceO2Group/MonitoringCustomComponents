@@ -58,12 +58,12 @@ public class Dispatcher {
     
     private static String ARGPARSE_CONFIG = "config";
     private static String GENERAL_LOGFILENAME_CONFIG = "log4jfilename";
-    private static String TOPICS_INPUT_CONFIG = "input";
-    private static String TOPICS_OUTPUT_AVG_CONFIG = "output.avg";
-	private static String TOPICS_OUTPUT_SUM_CONFIG = "output.sum";
-	private static String TOPICS_OUTPUT_MIN_CONFIG = "output.min";
-	private static String TOPICS_OUTPUT_MAX_CONFIG = "output.max";
-	private static String TOPICS_OUTPUT_DEFAULT_CONFIG = "output.default";
+    private static String TOPICS_INPUT_CONFIG = "topic.input";
+    private static String TOPICS_OUTPUT_AVG_CONFIG = "topic.avg";
+	private static String TOPICS_OUTPUT_SUM_CONFIG = "topic.sum";
+	private static String TOPICS_OUTPUT_MIN_CONFIG = "topic.min";
+	private static String TOPICS_OUTPUT_MAX_CONFIG = "topic.max";
+	private static String TOPICS_OUTPUT_DEFAULT_CONFIG = "topic.default";
 	private static String SELECTION_MEASUREMENT_CONFIG = "measurement";
 	private static String SELECTION_TAG_TO_REMOVE_CONFIG = "removetags";
 

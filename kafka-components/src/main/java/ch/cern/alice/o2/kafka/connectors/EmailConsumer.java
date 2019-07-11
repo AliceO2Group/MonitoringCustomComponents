@@ -206,7 +206,7 @@ public class EmailConsumer {
 			receivedRecords += consumerRecords.count();
 			if( stats_enabled ) stats();
             for (ConsumerRecord<byte[], byte[]> record : consumerRecords) {
-            	emailer.sendEmail(new String(record.value()));
+				emailer.sendEmail(new String(record.value()));
             }
 		}
 	}
