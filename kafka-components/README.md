@@ -320,6 +320,7 @@ Tab. 4
 
 ### Aggregator Component
 This component executes a specific aggregation function on messages read from the dedicated topic.
+The topics used from the aggregators MUST have a single partition.
 
 #### Command
 The consumer is execute using the following command:

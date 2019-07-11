@@ -5,7 +5,7 @@ kafka_consumer_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
    topic: notification-topic
 
-mattermostr_config:
+mattermost_config:
    url: https://<mattermost-server-hostname>/hooks/<token-id>
 
 stats_config:
