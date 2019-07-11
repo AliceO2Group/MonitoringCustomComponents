@@ -241,9 +241,11 @@ These components allow the aggregation of messages using the following four func
 - maximum
 
 The messages are retrieved from and sent to a Kafka cluster, of course different topics must be used.
-Each aggregation function requires a dedicated topic for the processing.
-The Dispatcher component forwards messages to these topics and the Aggregator components process the aggregated values.
+Each aggregation function requires a dedicated topic for the processing:
+- the Dispatcher component forwards messages to these topics
+- the Aggregator components process the aggregated values.
 The results are sent to an output topic formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
+A measurement can be aggregated using only one aggregation function.
 
 
 ### Dispatcher Component
