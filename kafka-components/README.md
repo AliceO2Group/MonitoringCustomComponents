@@ -94,8 +94,8 @@ Tab. 1
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
 
-
-### Mattermost Consumer
+- [Dispatcher](#dispatcher-component)
+### Mattermost Consu- [Aggregator](#aggregator-component)mer
 This component retrieves messages from the Kafka cluster and forward them to the HTTP Mattermost endpoint. 
 Before it's needed to create an [Incoming Webhooks](https://docs.mattermost.com/developer/webhooks-incoming.html) 
 The retrived messages from Kafka are JSON format and compliant to the Grafana notification message format:
@@ -242,8 +242,8 @@ These components allow the aggregation of messages using the following four func
 
 The messages are retrieved from and sent to a Kafka cluster, of course different topics must be used.
 Each aggregation function requires a dedicated topic for the processing:
-- the Dispatcher component forwards messages to these topics
-- the Aggregator components process the aggregated values.
+- the [Dispatcher component](#dispatcher-component) forwards messages to these topics
+- the [Aggregator components](#aggregator-component) process the aggregated values.
 
 
 The results are sent to an output topic formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
