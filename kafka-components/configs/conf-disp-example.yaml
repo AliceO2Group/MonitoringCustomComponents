@@ -1,5 +1,5 @@
 general:
-   log4jfilename: ./log4j-dispatcher.properties
+   log4jfilename: configs/log4j-dispatcher.properties
 
 kafka_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
