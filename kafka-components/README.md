@@ -25,7 +25,7 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
  mvn clean -e install -DskipTests 
 ```
 
-The generated jar (`target/kafka-streams-o2-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
+The generated jar (`target/o2-kafka-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
 ## Consumer Components
 Each consumer component retrieves messages from the Kafka cluster and forwards them to a specific external component.
@@ -39,7 +39,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer can started using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
  ch.cern.alice.o2.kafka.connectors.InfluxdbUdpConsumer \
  --config conf-influxdb-udp.yaml
 ```
@@ -118,7 +118,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.MattermostConsumer  \
   --config conf-mattermost.yaml
 ```
@@ -181,7 +181,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.EmailConsumer  \
   --config conf-email.yaml
 ```
@@ -243,7 +243,7 @@ These components allow the aggregation of messages using the following four func
 The messages are retrieved from and sent to a Kafka cluster, of course different topics must be used.
 Each aggregation function requires a dedicated topic for the processing:
 - the [Dispatcher component](#dispatcher-component) forwards messages to these topics
-- the [Aggregator components](#aggregator-component) process the aggregated values.
+- the [Aggregator components](#aggregator-component) process the aggregated values
 
 
 The results are sent to an output topic formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
@@ -257,7 +257,7 @@ This component forwards messages towards specific topics following rules descriv
 The consumer is execute using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.Dispatcher \
   --config conf-disp.yaml
 ```
@@ -326,25 +326,25 @@ This component executes a specific aggregation function on messages read from th
 The consumer is execute using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorAvg \
   --config conf-aggr-avg.yaml
 ```
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorSum \
   --config conf-aggr-sum.yaml
 ```
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorMin \
   --config conf-aggr-min.yaml
 ```
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorMax \
   --config conf-aggr-max.yaml
 ```
