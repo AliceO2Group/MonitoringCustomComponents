@@ -49,7 +49,7 @@ A configuration file example is:
 
 ```
 general:
-   log4jfilename: ./log4j-influxdb-consumer.properties
+   log4jfilename: configs/log4j-influxdb-udp.properties
 
 kafka_consumer_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
@@ -94,8 +94,7 @@ Tab. 1
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
 
-- [Dispatcher](#dispatcher-component)
-### Mattermost Consu- [Aggregator](#aggregator-component)mer
+### Mattermost Consumer
 This component retrieves messages from the Kafka cluster and forward them to the HTTP Mattermost endpoint. 
 Before it's needed to create an [Incoming Webhooks](https://docs.mattermost.com/developer/webhooks-incoming.html) 
 The retrived messages from Kafka are JSON format and compliant to the Grafana notification message format:
@@ -128,7 +127,7 @@ A configuration file example is:
 
 ```
 general:
-   log4jfilename: ./log4j-mattermost-consumer.properties
+   log4jfilename: configs/log4j-mattermost-consumer.properties
 
 kafka_consumer_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
@@ -191,7 +190,7 @@ A configuration file example is:
 
 ```
 general:
-   log4jfilename: ./log4j-email-consumer.properties
+   log4jfilename: configs/log4j-email-consumer.properties
 
 kafka_consumer_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
@@ -267,7 +266,7 @@ A configuration file example is:
 
 ```
 general:
-   log4jfilename: ./log4j-dispatcher.properties
+   log4jfilename: configs/log4j-dispatcher.properties
 
 kafka_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
@@ -354,7 +353,7 @@ A configuration file example is:
 
 ```
 general:
-   log4jfilename: ./log4j-aggregator.properties
+   log4jfilename: configs/log4j-aggregator-XXX.properties
 
 kafka_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
