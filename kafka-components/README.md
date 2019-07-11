@@ -114,7 +114,7 @@ Only the `description` field is mandatory, the remaining two ones are printed if
 The component could be configured in order to send inner monitoring data to an InfluxDB instance.
 
 #### Command
-The consumer is execute using the following command:
+The consumer can started using the following command:
 
 ```
 java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
@@ -177,7 +177,7 @@ All JSON fields are mandatory.
 The component could be configured in order to send inner monitoring data to an InfluxDB instance.
 
 #### Command
-The consumer is execute using the following command:
+The consumer can started using the following command:
 
 ```
 java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
@@ -253,7 +253,7 @@ A measurement can be aggregated using only one aggregation function.
 This component forwards messages towards specific topics following rules descrived in a configuration file.
 
 #### Command
-The consumer is execute using the following command:
+The dispatcher can started using the following command:
 
 ```
 java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
@@ -323,7 +323,7 @@ This component executes a specific aggregation function on messages read from th
 The topics used from the aggregators MUST have a single partition.
 
 #### Command
-The consumer is execute using the following command:
+The aggregation components can started using the following commands:
 
 ```
 java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
