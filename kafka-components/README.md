@@ -25,7 +25,7 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
  mvn clean -e install -DskipTests 
 ```
 
-The generated jar (`target/o2-kafka-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
+The generated jar (`target/kafka-streams-o2-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
 ## Consumer Components
 Each consumer component retrieves messages from the Kafka cluster and forwards them to a specific external component.
@@ -39,9 +39,9 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer can started using the following command:
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
  ch.cern.alice.o2.kafka.connectors.InfluxdbUdpConsumer \
- --config conf-influxdb-udp.yaml
+ --config configs/conf-influxdb-udp.yaml
 ```
 
 #### Configuration file 
@@ -118,9 +118,9 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command:
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.MattermostConsumer  \
-  --config conf-mattermost.yaml
+  --config configs/conf-mattermost.yaml
 ```
 
 #### Configuration file 
@@ -181,9 +181,9 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer is execute using the following command:
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.EmailConsumer  \
-  --config conf-email.yaml
+  --config configs/conf-email.yaml
 ```
 
 #### Configuration file 
@@ -257,9 +257,9 @@ This component forwards messages towards specific topics following rules descriv
 The consumer is execute using the following command:
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.Dispatcher \
-  --config conf-disp.yaml
+  --config configs/conf-disp.yaml
 ```
 
 #### Configuration file 
@@ -326,27 +326,27 @@ This component executes a specific aggregation function on messages read from th
 The consumer is execute using the following command:
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorAvg \
-  --config conf-aggr-avg.yaml
+  --config configs/conf-aggr-avg.yaml
 ```
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorSum \
-  --config conf-aggr-sum.yaml
+  --config configs/conf-aggr-sum.yaml
 ```
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorMin \
-  --config conf-aggr-min.yaml
+  --config configs/conf-aggr-min.yaml
 ```
 
 ```
-java -cp target/o2-kafka-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.streams.AggregatorMax \
-  --config conf-aggr-max.yaml
+  --config configs/conf-aggr-max.yaml
 ```
 
 #### Configuration file 
