@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -50,7 +49,7 @@ import ch.cern.alice.o2.kafka.utils.YamlInfluxdbUdpConsumer;
 
 public class InfluxdbUdpConsumer {
 	private static Logger logger = LoggerFactory.getLogger(InfluxdbUdpConsumer.class); 
-	private static int data_endpoint_port = 0;
+	private static String data_endpoint_port_str = "";
 	private static int [] data_endpoint_ports = null;
 	private static int data_endpoint_ports_size = 0;
 	private static int data_endpoint_ports_index = 0;
@@ -64,6 +63,7 @@ public class InfluxdbUdpConsumer {
 	private static InetAddress data_address = null;
 	private static InetAddress stats_address = null;
 	private static DatagramSocket datagramSocket;
+	private static String topicName = "";
 	
 	/* Stats parameters */
 	private static final String STATS_TYPE_INFLUXDB = "influxdb";
@@ -101,11 +101,10 @@ public class InfluxdbUdpConsumer {
         Map<String,String> kafka_consumer_config = config.getKafka_consumer_config();
         Map<String,String> sender_config = config.getSender_config();
         Map<String,String> stats_config = config.getStats_config();
-        String topicName = kafka_consumer_config.get("topic");
-        data_endpoint_hostname = sender_config.getOrDefault("hostname",DEFAULT_HOSTNAME);
-        String[] data_endpoint_ports_str = sender_config.getOrDefault("port",DEFAULT_PORT).split(",");
-        System.out.println(sender_config.getOrDefault("port",DEFAULT_PORT));
-        System.out.println(data_endpoint_ports_str);
+        topicName = kafka_consumer_config.get("topic");
+		data_endpoint_hostname = sender_config.getOrDefault("hostname",DEFAULT_HOSTNAME);
+		data_endpoint_port_str = sender_config.getOrDefault("port",DEFAULT_PORT);
+        String[] data_endpoint_ports_str = data_endpoint_port_str.split(",");
         data_endpoint_ports = new int[data_endpoint_ports_str.length];
         for( int i=0; i < data_endpoint_ports_str.length; i++) {
         	data_endpoint_ports[i] = Integer.parseInt(data_endpoint_ports_str[i]);
@@ -118,7 +117,8 @@ public class InfluxdbUdpConsumer {
         stats_endpoint_port = Integer.parseInt(stats_config.getOrDefault("port", DEFAULT_PORT));
         stats_period_ms = Integer.parseInt(stats_config.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
         
-        logger.info("Data Endpoint Hostname: "+ Arrays.toString(data_endpoint_ports));
+		logger.info("Data Endpoint Hostname: "+ data_endpoint_hostname);
+		logger.info("Data Endpoint Port(s): " + data_endpoint_port_str);
         logger.info("Stats Enabled?: "+ stats_enabled);
         
         /* UDP Configuration */
@@ -181,7 +181,8 @@ public class InfluxdbUdpConsumer {
 	
 	private static void sendUdpData(byte[] data2send) {
 		try {
-			DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_endpoint_ports[(data_endpoint_ports_index++)%data_endpoint_ports_size]);
+			int data_port = data_endpoint_ports[(data_endpoint_ports_index++)%data_endpoint_ports_size];
+			DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_port );
 	        datagramSocket.send(packet);
 	        sentRecords++;
 		} catch (Exception e) {
@@ -197,7 +198,7 @@ public class InfluxdbUdpConsumer {
     		startMs = nowMs;
     		String hostname = InetAddress.getLocalHost().getHostName();
 			if(stats_type.equals(STATS_TYPE_INFLUXDB)) {
-	    		String data2send = "kafka_consumer,endpoint_type=InfluxDB,endpoint="+data_endpoint_hostname+":"+data_endpoint_port+",hostname="+hostname;
+	    		String data2send = "kafka_consumer,endpoint_type=InfluxDB,endpoint="+data_endpoint_hostname+":"+data_endpoint_port_str.replace(',','|')+",hostname="+hostname+",topic="+topicName;
 				data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
 				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), stats_address, stats_endpoint_port);
 		        datagramSocket.send(packet);

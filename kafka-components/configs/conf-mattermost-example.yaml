@@ -1,0 +1,15 @@
+general:
+   log4jfilename: configs/log4j-mattermost-consumer.properties
+
+kafka_consumer_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   topic: notification-topic
+
+mattermost_config:
+   url: https://<mattermost-server-hostname>/hooks/<token-id>
+
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>

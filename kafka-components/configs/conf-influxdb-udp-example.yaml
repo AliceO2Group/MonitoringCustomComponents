@@ -1,0 +1,21 @@
+general:
+   log4jfilename: configs/log4j-influxdb-consumer.properties
+
+kafka_consumer_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   topic: <input-topic>
+   group.id: influxdb-udp-consumer
+   auto.offset.reset: latest
+   fetch.min.bytes: 1
+   receive.buffer.bytes: 262144
+   max.poll.records: 1000000
+
+sender_config:
+   hostname: <influxdb-hostname>
+   port: <influxdb-port>
+
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>

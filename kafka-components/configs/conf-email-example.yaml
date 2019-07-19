@@ -1,0 +1,19 @@
+general:
+   log4jfilename: configs/log4j-email-consumer.properties
+
+kafka_consumer_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   topic: email-topic
+
+email_config:
+   hostname: <smtp-server>
+   port: <smtp-port>
+   from: <from-email-aggress>
+   username: <username>
+   password: <password>
+
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <infludb-udp-port>
+   period_ms: <sample-period-in-milliseconds>
