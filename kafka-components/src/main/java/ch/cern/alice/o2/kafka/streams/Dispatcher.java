@@ -177,15 +177,8 @@ public class Dispatcher {
         
         final StreamsBuilder builder = new StreamsBuilder();
         try {
-<<<<<<< HEAD
-			KStream<String, String> source = builder.stream(input_topic);
-
-			KStream<String,LineProtocol> lp_data = source.mapValues( 
-=======
 	        KStream<String, String> source = builder.stream(input_topic);
-			
 	        KStream<String,LineProtocol> lp_data = source.mapValues( 
->>>>>>> 55f3fc219444a541471bf5c4e5f56f8f23b2ee0b
 	        		value -> {
 	        			LineProtocol result = new LineProtocol();
 						try {
@@ -203,17 +196,10 @@ public class Dispatcher {
 
 			@SuppressWarnings("unchecked")
 			KStream<String,Triplet<String, Double, String>> branches[] = triplets_data.branch(
-<<<<<<< HEAD
 	        		(key,value) -> value.getValue2().equals(TOPICS_OUTPUT_AVG_CONFIG),
 	        		(key,value) -> value.getValue2().equals(TOPICS_OUTPUT_SUM_CONFIG),
 	        		(key,value) -> value.getValue2().equals(TOPICS_OUTPUT_MIN_CONFIG),
 					(key,value) -> value.getValue2().equals(TOPICS_OUTPUT_MAX_CONFIG),
-=======
-	        		(key,value) -> value.getValue2().equals(FUNCTION_AVG),
-	        		(key,value) -> value.getValue2().equals(FUNCTION_SUM),
-	        		(key,value) -> value.getValue2().equals(FUNCTION_MIN),
-					(key,value) -> value.getValue2().equals(FUNCTION_MAX),
->>>>>>> 55f3fc219444a541471bf5c4e5f56f8f23b2ee0b
 					(key,value) -> true
 	        		);
 	        
