@@ -80,7 +80,7 @@ public class InfluxdbUdpConsumer {
 	private static final String DEFAULT_FETCH_MIN_BYTES = "1";
 	private static final String DEFAULT_RECEIVE_BUFFER_BYTES = "262144";
 	private static final String DEFAULT_MAX_POLL_RECORDS = "1000000";
-	private static final String DEFAULT_ENABLE_AUTO_COMMIT_CONFIG = "false";
+	private static final String DEFAULT_ENABLE_AUTO_COMMIT_CONFIG = "true";
 	private static final String DEFAULT_GROUP_ID_CONFIG = "influxdb-udp-consumer";
 	private static final int POLLING_PERIOD_MS = 50;
 	
@@ -165,7 +165,7 @@ public class InfluxdbUdpConsumer {
                 ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
                 receivedRecords += consumerRecords.count();
                 consumerRecords.forEach( record -> sendUdpData(record.value()));
-        		consumer.commitAsync();
+        		//consumer.commitAsync();
         		if( stats_enabled ) stats();
             } catch (RetriableCommitFailedException e) {
         		logger.error("Kafka Consumer Committ Exception: ",e);
@@ -180,14 +180,19 @@ public class InfluxdbUdpConsumer {
 	}
 	
 	private static void sendUdpData(byte[] data2send) {
-		try {
-			int data_port = data_endpoint_ports[(data_endpoint_ports_index++)%data_endpoint_ports_size];
-			DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_port );
-	        datagramSocket.send(packet);
-	        sentRecords++;
-		} catch (Exception e) {
-			logger.error("Error: ",e);
+		if (data2send.length > 0){
+			try {
+				int data_port = data_endpoint_ports[(data_endpoint_ports_index++)%data_endpoint_ports_size];
+				DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_port );
+				datagramSocket.send(packet);
+				sentRecords++;
+			} catch (Exception e) {
+				logger.error("Error: ",e);
+			}
+		} else {
+			logger.info("Message lenght zero");
 		}
+	
 	}
 	
 	
