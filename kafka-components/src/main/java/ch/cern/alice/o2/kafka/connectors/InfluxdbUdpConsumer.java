@@ -22,7 +22,6 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Arrays;
 import java.util.Collections;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -48,6 +47,11 @@ import java.io.File;
 import ch.cern.alice.o2.kafka.utils.YamlInfluxdbUdpConsumer;
 
 public class InfluxdbUdpConsumer {
+	private static String version = "0.1.1";
+	/*
+	Version 0.1.1 Variable overflow managing
+
+	*/
 	private static Logger logger = LoggerFactory.getLogger(InfluxdbUdpConsumer.class); 
 	private static String data_endpoint_port_str = "";
 	private static int [] data_endpoint_ports = null;
@@ -80,7 +84,7 @@ public class InfluxdbUdpConsumer {
 	private static final String DEFAULT_FETCH_MIN_BYTES = "1";
 	private static final String DEFAULT_RECEIVE_BUFFER_BYTES = "262144";
 	private static final String DEFAULT_MAX_POLL_RECORDS = "1000000";
-	private static final String DEFAULT_ENABLE_AUTO_COMMIT_CONFIG = "false";
+	private static final String DEFAULT_ENABLE_AUTO_COMMIT_CONFIG = "true";
 	private static final String DEFAULT_GROUP_ID_CONFIG = "influxdb-udp-consumer";
 	private static final int POLLING_PERIOD_MS = 50;
 	
@@ -107,7 +111,7 @@ public class InfluxdbUdpConsumer {
         String[] data_endpoint_ports_str = data_endpoint_port_str.split(",");
         data_endpoint_ports = new int[data_endpoint_ports_str.length];
         for( int i=0; i < data_endpoint_ports_str.length; i++) {
-        	data_endpoint_ports[i] = Integer.parseInt(data_endpoint_ports_str[i]);
+          	data_endpoint_ports[i] = Integer.parseInt(data_endpoint_ports_str[i]);
         }
         data_endpoint_ports_size = data_endpoint_ports_str.length;
         
@@ -123,26 +127,26 @@ public class InfluxdbUdpConsumer {
         
         /* UDP Configuration */
         try {
-        	data_address = InetAddress.getByName(data_endpoint_hostname);
+          	data_address = InetAddress.getByName(data_endpoint_hostname);
         } catch (IOException e) {
-          logger.error("Error opening creation address using hostname: "+data_endpoint_hostname, e);
+          	logger.error("Error opening creation address using hostname: "+data_endpoint_hostname, e);
         }
         
-        try {
-	        datagramSocket = new DatagramSocket();
-	      } catch (SocketException e) {
-	        logger.error("Error while creating UDP socket", e);
-	    }
+       	try {
+			datagramSocket = new DatagramSocket();
+		} catch (SocketException e) {
+			logger.error("Error while creating UDP socket", e);
+		}
         
         if( stats_enabled ) {
-	        logger.info("Stats Endpoint Hostname: "+stats_endpoint_hostname);
-	        logger.info("Stats Endpoint Port: "+stats_endpoint_port);
-	        logger.info("Stats Period: "+stats_period_ms+"ms");
-	        try {
-	        	stats_address = InetAddress.getByName(stats_endpoint_hostname);
-	        } catch (IOException e) {
-	          logger.error("Error opening creation address using hostname: "+stats_endpoint_hostname, e);
-	        }
+			logger.info("Stats Endpoint Hostname: "+stats_endpoint_hostname);
+			logger.info("Stats Endpoint Port: "+stats_endpoint_port);
+			logger.info("Stats Period: "+stats_period_ms+"ms");
+			try {
+				stats_address = InetAddress.getByName(stats_endpoint_hostname);
+			} catch (IOException e) {
+				logger.error("Error opening creation address using hostname: "+stats_endpoint_hostname, e);
+			}
         }
         
         /* Configure Kafka consumer */
@@ -158,67 +162,73 @@ public class InfluxdbUdpConsumer {
         props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, kafka_consumer_config.getOrDefault(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, DEFAULT_MAX_POLL_RECORDS));
     	
         KafkaConsumer<byte[],byte[]> consumer = new KafkaConsumer<byte[],byte[]>(props);
-        consumer.subscribe(Collections.singletonList(topicName));
+		consumer.subscribe(Collections.singletonList(topicName));
+		logger.info("Consumer version: "+version);
      
         while (true) {
-        	try {
-                ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
-                receivedRecords += consumerRecords.count();
-                consumerRecords.forEach( record -> sendUdpData(record.value()));
-        		consumer.commitAsync();
-        		if( stats_enabled ) stats();
-            } catch (RetriableCommitFailedException e) {
-        		logger.error("Kafka Consumer Committ Exception: ",e);
-        		consumer.close();
-        		break;
-        	} catch (Exception e) {
-    			logger.error("Kafka Consumer Error: ",e);
-    			consumer.close();
-        		break;
-    		}
-        }
-	}
-	
-	private static void sendUdpData(byte[] data2send) {
-		try {
-			int data_port = data_endpoint_ports[(data_endpoint_ports_index++)%data_endpoint_ports_size];
-			DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_port );
-	        datagramSocket.send(packet);
-	        sentRecords++;
-		} catch (Exception e) {
-			logger.error("Error: ",e);
+          	try {
+           		ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
+				receivedRecords += consumerRecords.count();
+				consumerRecords.forEach( record -> sendUdpData(record.value()));
+				//consumer.commitAsync();
+				if( stats_enabled ) stats();
+			} catch (RetriableCommitFailedException e) {
+				logger.error("Kafka Consumer Committ Exception: ",e);
+				consumer.close();
+				break;
+			} catch (Exception e) {
+				logger.error("Kafka Consumer Error: ",e);
+				consumer.close();
+				break;
+			}
 		}
 	}
 	
-	
+	private static void sendUdpData(byte[] data2send) {
+		if (data2send.length > 0){
+			try {
+				if(++data_endpoint_ports_index >= data_endpoint_ports_size) data_endpoint_ports_index = 0;
+				int data_port = data_endpoint_ports[data_endpoint_ports_index];
+				DatagramPacket packet = new DatagramPacket(data2send, data2send.length, data_address, data_port );
+				datagramSocket.send(packet);
+				sentRecords++;
+		  	} catch (Exception e) {
+				logger.error("Error. Index: "+data_endpoint_ports_index+" size: "+data_endpoint_ports_size+" module: "+data_endpoint_ports_index%data_endpoint_ports_size,e);
+			}
+	  	} else {
+	    	logger.info("Message lenght zero");
+	  	}
+	}
 	
 	private static void stats() throws IOException {
 		long nowMs = System.currentTimeMillis();
+		if(receivedRecords < 0) receivedRecords = 0;
+		if(sentRecords < 0) sentRecords = 0;
     	if ( nowMs - startMs > stats_period_ms) {
-    		startMs = nowMs;
-    		String hostname = InetAddress.getLocalHost().getHostName();
+			startMs = nowMs;
+    	    String hostname = InetAddress.getLocalHost().getHostName();
 			if(stats_type.equals(STATS_TYPE_INFLUXDB)) {
-	    		String data2send = "kafka_consumer,endpoint_type=InfluxDB,endpoint="+data_endpoint_hostname+":"+data_endpoint_port_str.replace(',','|')+",hostname="+hostname+",topic="+topicName;
+				String data2send = "kafka_consumer,endpoint_type=InfluxDB,endpoint="+data_endpoint_hostname+":"+data_endpoint_port_str.replace(',','|')+",hostname="+hostname+",topic="+topicName;
 				data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
 				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), stats_address, stats_endpoint_port);
-		        datagramSocket.send(packet);
+				datagramSocket.send(packet);
 			}
     	}
 	}
     
 	private static ArgumentParser argParser() {
-        @SuppressWarnings("deprecation")
-		ArgumentParser parser = ArgumentParsers
-            .newArgumentParser("influxdb-udp-consumerr")
-            .defaultHelp(true)
-            .description("This tool is used to send UDP packets to InfluxDB.");
+		@SuppressWarnings("deprecation")
+	  	ArgumentParser parser = ArgumentParsers
+	 		.newArgumentParser("influxdb-udp-consumerr")
+          	.defaultHelp(true)
+          	.description("This tool is used to send UDP packets to InfluxDB.");
 
-        parser.addArgument("--config")
-    	    .action(store())
-            .required(true)
-            .type(String.class)
-            .dest("config")
-            .help("config file");
+    	parser.addArgument("--config")
+			.action(store())
+			.required(true)
+			.type(String.class)
+			.dest("config")
+			.help("config file");
 
         return parser;
     }
