@@ -16,18 +16,16 @@
  */
 package ch.cern.alice.o2.kafka.streams;
 
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.KeyValue;
-
+import org.apache.kafka.streams.processor.Processor;
+import org.apache.kafka.streams.processor.ProcessorSupplier;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.log4j.PropertyConfigurator;
-import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,38 +44,37 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
-import java.util.List;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import ch.cern.alice.o2.kafka.utils.YamlDispatcherConfig;
-import ch.cern.alice.o2.kafka.utils.LineProtocol;
-import ch.cern.alice.o2.kafka.utils.SimplePair;
+import org.apache.kafka.streams.state.KeyValueIterator;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
 
-public class ChangeDetector {
-	private static String version = "0.0.1";
-	/*
-	Version 0.0.1 first version
-	*/
+import ch.cern.alice.o2.kafka.utils.KafkaLineProtocol;
+import ch.cern.alice.o2.kafka.utils.YamlChangeDetectorConfig;
 
-	private static int stats_endpoint_port = 0;
-	private static String stats_type;
-	private static long stats_period_ms = 0;
-	private static InetAddress stats_address = null;
+public final class ChangeDetector {
+	private static String statsEndpointHostname = "";
+	private static int statsEndpointPort = 0;
+	private static String statsType;
+	private static long statsPeriodMs = 0;
+	private static InetAddress statsAddress = null;
+	private static boolean statsEnabled = false;
 	private static DatagramSocket datagramSocket;
 	private static long receivedRecords = 0;
+	private static long filteredRecords = 0;
+	private static long sentPeriodicRecords = 0;
 	private static long sentRecords = 0;
 	private static long startMs = 0;
-
-	private static Map<String,String> table = new HashMap<String,String>();
-	private static Set<String> allowed_meas = new HashSet<String>();
-
+	private static int refresh_period_s = 0;
+	private static Set<String> allowedFieldMeas = new HashSet<String>();
+	private static Set<String> allowedMeas = new HashSet<String>();
 
 	private static Logger logger = LoggerFactory.getLogger(ChangeDetector.class); 
     private static String ARGPARSE_CONFIG = "config";
@@ -85,8 +82,14 @@ public class ChangeDetector {
     private static String TOPICS_INPUT_CONFIG = "topic.input";
 	private static String TOPICS_OUTPUT_CONFIG = "topic.output";
 	private static String REFRESH_PERIOD_S_CONFIG = "refresh.period.s";
-	private static String FILTER_MEASUREMENT_CONFIG = "filter.measurements";
 
+	/* Process components' name */
+	private static String CHANGELOG_STORE_NAME = "changeLogStore5";
+	private static String SOURCE_PROCESSOR_NAME = "sourceProcessorComponent";
+	private static String FILTER_PROCESSOR_NAME = "FilterProcessorComponent";
+	private static String CHANGELOG_PROCESSOR_NAME = "ChangeLogProcessorComponent";
+	private static String SINK_PROCESSOR_NAME = "sinkProcessorComponent";
+	
 	/* Stats parameters */
 	private static final String STATS_TYPE_INFLUXDB = "influxdb";
 	private static final String DEFAULT_STATS_TYPE = STATS_TYPE_INFLUXDB;
@@ -95,55 +98,154 @@ public class ChangeDetector {
 	private static final String DEFAULT_STATS_HOSTNAME = "localhost";
 	private static final String DEFAULT_STATS_PORT = "8090";
 
+	private static String DEFAULT_REPLICATION_FACTOR="3";
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
-	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-change-detector";
-	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-change-detector";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-change-detector2";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-change-detector2";
+	private static String DEFAULT_CLIENT_DESCRIPTION = "This tool is used to detect changes in selected metric values.";
 
-	private static String THREAD_NAME = "change-detector-shutdown-hook";
+	private static String THREAD_NAME = "change-detector-shutdown-hook2";
 
-	public static String getFastMeasurement(String lp) {
-		char[] temp = new char[50];
-		char[] ch_meas = lp.toCharArray(); 
-		for(int i=0; i<ch_meas.length; i++){
-			if(ch_meas[i] != ',' ) {
-				temp[i] = ch_meas[i];
-			} else {
-				temp[i] = 0;
-				break;
-			}
+	static class FilterProcessorSupplier implements ProcessorSupplier<String, String> {
+		/*
+		*  Input Record has this format
+		*  String mfKey    = meas#fieldName
+		*  String tvtValue = tags#fieldValue#timestamp
+		*
+		*  ## Variable description:   
+		*  String tags = tagKey1=tagValue1,....,TagKeyN=TagValueN
+		*  String timestamp = <optional>
+		*/
+		
+		@Override
+		public Processor<String,String> get(){
+			return new Processor<String,String>(){
+				private ProcessorContext context;
+			
+				@Override
+				//@SuppressWarnings("unchecked")
+				public void init( final ProcessorContext context){
+					this.context = context;	
+				}
+				
+				@Override
+				public void process(String mfKey, String tvtValue) {
+					receivedRecords++;
+					if( statsEnabled ) {
+						try {
+							stats();
+						} catch (IOException e) {
+							logger.warn(e.getMessage());
+						}
+					}
+					//logger.info("Key: "+mfKey+" is in "+allowedFieldMeas+" ? "+allowedFieldMeas.contains(mfKey));
+					//System.out.println("Key: "+mfKey+" is in "+allowedFieldMeas+" ? "+allowedFieldMeas.contains(mfKey));
+					if( allowedFieldMeas.contains(mfKey)){
+						context.forward(mfKey, tvtValue);
+						filteredRecords++;
+						//System.out.println("\t\t\tFFFF OUT Key: "+mfKey+", value: "+ tvtValue);
+					}
+				}
+	  
+				@Override
+				public void close() {}
+  			};
 		}
-		return new String(temp);
-	}
-	
-	public static boolean filterMeas(String lp){
-		String meas = getFastMeasurement(lp);
-		return allowed_meas.contains(meas);
 	}
 
-	public static List<String> getSingleton(String meas){
+	static String getLineProtocolFromEntryStateStore(KeyValue<String, String> entry, long timestamp) throws Exception {
+		/* 
+		 *  Data retrieved from State store has this format:
+		 *  String key = measName,tagKey1=tagValue1,....,TagKeyN=TagValueN#fieldName
+		 *  String value = fieldValue
+		 */
 
+		String [] vett = entry.key.split("#");
+		if(vett.length != 2){
+			throw new Exception("Read key from store is not well written: " + entry.key);
+		}
+		String lp_key = vett[0];
+		String fieldName = vett[1];
+		String lp = lp_key + " " + fieldName + "=" + entry.value + " " + timestamp + "000000";
+		return lp;							
 	}
 
-	public static String detectChanges(String meas){
-
-	}
-
-
-	public static String tripletsToString(Triplet<String, Double, String> t) {
-		return new String(t.getValue0()+","+t.getValue1()+","+t.getValue2());
-	}
-	
-	public static List<Triplet<String,Double,String>> getTriplets(LineProtocol lp, Map<String,SimplePair> aggr_conf){
-		String meas = lp.getMeasurement();
-		if(aggr_conf.containsKey(meas)) {
-			String func = aggr_conf.get(meas).key;
-			String [] tags2remove = aggr_conf.get(meas).value.split(",");
-			return lp.dropTagKeys(tags2remove).dropNotNumberFields().getTriplets(func);
-		} else {
-			/* The measurement must not be aggregated */
-			List<Triplet<String,Double,String>> l = new ArrayList<Triplet<String,Double,String>>();
-			l.add(new Triplet<String,Double,String>(lp.toLineProtocol(TimeUnit.NANOSECONDS),new Double(0),""));
-			return l;
+	static class changeLogProcessorSupplier implements ProcessorSupplier<String, String> {
+		/*
+		*  Input Record has this format
+		*  String  mfKey   = meas#fieldName
+		*  String tvtValue = tags#fieldValue#timestamp
+		*
+		*  ## Variable description:   
+		*  String tags = tagKey1=tagValue1,....,TagKeyN=TagValueN
+		*  String timestamp = <optional>
+		*/
+		@Override
+		public Processor<String,String> get(){
+			return new Processor<String,String>(){
+				private ProcessorContext context;
+				private KeyValueStore<String, String> kvStore;
+				
+				@Override
+				@SuppressWarnings("unchecked")
+				public void init(ProcessorContext context) {
+					this.context = context;
+					this.kvStore = (KeyValueStore<String,String>) context.getStateStore(CHANGELOG_STORE_NAME);
+					// if(refresh_period_s > 0) {
+					this.context.schedule(Duration.ofSeconds(refresh_period_s), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
+						KeyValueIterator<String, String> iter = this.kvStore.all();
+						//int ii = this.kvStore.hashCode();
+						while (iter.hasNext()) {
+							KeyValue<String, String> entry = iter.next();
+							try{
+								String lp = getLineProtocolFromEntryStateStore(entry, timestamp);
+								//System.out.println("hash: "+ii+" key: "+entry.key + " value: " + entry.value + " lp: "+lp);
+								context.forward(entry.key, lp+"$");
+								sentPeriodicRecords++;
+							} catch (Exception e) {
+								logger.warn(e.getMessage());
+							}
+						}
+						iter.close();
+						// commit the current processing progress
+						context.commit();
+					});
+				}
+			
+				@Override
+				public void process(String mfKey, String tvtValue) {
+					//System.out.println("\t\t\tCCCC1 key: "+mfKey+", value: "+tvtValue);
+					KafkaLineProtocol klp = new KafkaLineProtocol(mfKey,tvtValue);
+					String mtfKey = klp.getMeasTagFieldKey();
+					String fieldValue = klp.getFieldValue();
+					//System.out.println("\t\t\tCCCC key: "+mtfKey+", value: "+fieldValue);
+					String storeValue = kvStore.get(mtfKey);
+					//System.out.println("\t\tChange_storeValue: "+storeValue);
+					//System.out.println("\t\tChange_fieldValue: "+fieldValue);
+					if(storeValue == null){
+						String lp = klp.getLineProtocol();
+						logger.debug("kvStore does not contain: "+lp);
+						this.kvStore.put(mtfKey,fieldValue);
+						context.forward(mfKey, lp+"@");
+						sentRecords++;
+						context.commit();
+					} else {
+						if(! fieldValue.equals(storeValue)){
+							String lp = klp.getLineProtocol();
+							logger.debug("Change detected. lp: "+lp+" old value: "+storeValue);
+							this.kvStore.put(mtfKey,fieldValue);
+							context.forward(mfKey, lp+"@");
+							context.commit();
+							sentRecords++;
+						} else {
+							logger.debug("NO changes detected.");
+						}
+					}
+				}
+			
+				@Override
+				public void close() {}
+			};
 		}
 	}
 	
@@ -162,28 +264,37 @@ public class ChangeDetector {
 		
 		/* Logger configuration */
 		String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
-        PropertyConfigurator.configure(log4jfilename);
-
-		Map<String,String> kafka_consumer_config = config.getKafka_consumer_config();
-        Map<String,String> detector = config.getDetector();
-        Map<String,String> stats_config = config.getStats_config();
+		PropertyConfigurator.configure(log4jfilename);
+		
+		Map<String,String> detector = config.getDetector();
+		Map<String,String> filterConfig = config.getFilter();
+        Map<String,String> statsConfig = config.getStats_config();
 
 		String input_topic = detector.get(TOPICS_INPUT_CONFIG);
 		String output_topic = detector.get(TOPICS_OUTPUT_CONFIG);
-		String refresh_period_s = detector.get(REFRESH_PERIOD_S_CONFIG);
-		String filter_measurements = detector.get(FILTER_MEASUREMENT_CONFIG);
+		refresh_period_s = Integer.parseInt(detector.get(REFRESH_PERIOD_S_CONFIG));
+		allowedMeas = filterConfig.keySet();
+		for (Map.Entry<String, String> entry : filterConfig.entrySet()) {
+			String meas = entry.getKey();
+			String fields = entry.getValue();
+			String [] fieldsVett = fields.split(",");
+			for(String field: fieldsVett){
+				allowedFieldMeas.add(meas+"#"+field);
+			}
+		} 
 		
 		logger.info("detector.topics.input: " + input_topic);
 		logger.info("detector.topics.output: " + output_topic);
 		logger.info("detector.refresh.period.s: " + refresh_period_s);
-		logger.info("detector.filter.measurements: " + filter_measurements);
+		logger.info("filter.measurements: " + allowedMeas);
+		logger.info("filter.field_measurements: " + allowedFieldMeas);
 
-		boolean stats_enabled = Boolean.valueOf(stats_config.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
-        stats_type = DEFAULT_STATS_TYPE;
-        stats_endpoint_hostname = stats_config.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
-        stats_endpoint_port = Integer.parseInt(stats_config.getOrDefault("port", DEFAULT_STATS_PORT));
-        stats_period_ms = Integer.parseInt(stats_config.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
-		logger.info("Stats Enabled?: "+ stats_enabled);
+		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
+        statsType = DEFAULT_STATS_TYPE;
+        statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
+        statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
+        statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
+		logger.info("Stats Enabled?: "+ statsEnabled);
 		
 		try {
 			datagramSocket = new DatagramSocket();
@@ -191,43 +302,58 @@ public class ChangeDetector {
 			logger.error("Error while creating UDP socket", e);
 		}
 		
-		if( stats_enabled ) {
-			logger.info("Stats Endpoint Hostname: "+stats_endpoint_hostname);
-			logger.info("Stats Endpoint Port: "+stats_endpoint_port);
-			logger.info("Stats Period: "+stats_period_ms+"ms");
+		if( statsEnabled ) {
+			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
+			logger.info("Stats Endpoint Port: "+statsEndpointPort);
+			logger.info("Stats Period: "+statsPeriodMs+"ms");
 			try {
-				stats_address = InetAddress.getByName(stats_endpoint_hostname);
+				statsAddress = InetAddress.getByName(stats_endpoint_hostname);
 			} catch (IOException e) {
 				logger.error("Error opening creation address using hostname: "+stats_endpoint_hostname, e);
 			}
         }
 
-
-
-        Map<String,String> kafka_config = config.getkafka_config();
-                
-        Properties props = new Properties();
+		Map<String,String> kafka_config = config.getKafka_config();
+		Properties props = new Properties();
+		props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, DEFAULT_REPLICATION_FACTOR);
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
         props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
+		
+		StoreBuilder<KeyValueStore<String, String>> kvStore = Stores.keyValueStoreBuilder(
+			//Stores.persistentKeyValueStore(CHANGELOG_STORE_NAME),
+			Stores.inMemoryKeyValueStore(CHANGELOG_STORE_NAME),
+				Serdes.String(),
+				Serdes.String())
+			.withCachingEnabled();
+		//KeyValueStore<String, String> changeStore = changeSupplier.build();
+
+		Topology builder = new Topology();
+
+		// add the source processor node that takes Kafka topic "source-topic" as input
+		builder.addSource(SOURCE_PROCESSOR_NAME, input_topic)
+
+				// add the FilterProcessorSupplier node which takes records from the source processor and filters them
+				.addProcessor(FILTER_PROCESSOR_NAME,  new FilterProcessorSupplier(), SOURCE_PROCESSOR_NAME)
+
+				// add the changeLogProcessorSupplier node which takes data from filterProcessor node and evaluates changes
+				.addProcessor(CHANGELOG_PROCESSOR_NAME, new changeLogProcessorSupplier(), FILTER_PROCESSOR_NAME)
+
+				// add the change log store associated with the changeLogProcessor node
+				.addStateStore(kvStore, CHANGELOG_PROCESSOR_NAME)
+
+				// add the sink processor node that export data to the output_topic
+				.addSink(SINK_PROCESSOR_NAME, output_topic, CHANGELOG_PROCESSOR_NAME);
+
         
-        final StreamsBuilder builder = new StreamsBuilder();
-        try {
-			KStream<String, String> source = builder.stream(input_topic);
-			KStream<String, String> filtered_data = source.filter((key, value) -> filterMeas(value));
-			KStream<String, String> singlized_data = filtered_data.flatMapValues(value -> getSingleton(value));
-			KStream<String, String> detected_changes = singlized_data.mapValues(value -> detectChanges(value));
-			detected_changes.to(output_topic);
-	    } catch (Exception e) {
-        	e.printStackTrace();
-        }
-             		      
-        final Topology topology = builder.build();
-		logger.info(topology.describe().toString());
-        final KafkaStreams streams = new KafkaStreams(topology, props);
+		// generating the topology
+		logger.info(builder.describe().toString());
+
+		// constructing a streams client with the properties and topology
+        final KafkaStreams streams = new KafkaStreams(builder, props);
         final CountDownLatch latch = new CountDownLatch(1);
  
         // attach shutdown handler to catch control-c
@@ -247,18 +373,18 @@ public class ChangeDetector {
         }
         System.exit(0);
 	}
-	
-	private static void stats() throws IOException {
+	static void stats() throws IOException {
 		long nowMs = System.currentTimeMillis();
 		if(receivedRecords < 0) receivedRecords = 0;
 		if(sentRecords < 0) sentRecords = 0;
-    	if ( nowMs - startMs > stats_period_ms) {
+    	if ( nowMs - startMs > statsPeriodMs) {
 			startMs = nowMs;
     	    String hostname = InetAddress.getLocalHost().getHostName();
-			if(stats_type.equals(STATS_TYPE_INFLUXDB)) {
-				String data2send = "kafka_consumer,endpoint_type=InfluxDB,endpoint="+data_endpoint_hostname+":"+data_endpoint_port_str.replace(',','|')+",hostname="+hostname+",topic="+topicName;
-				data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
-				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), stats_address, stats_endpoint_port);
+			if(statsType.equals(STATS_TYPE_INFLUXDB)) {
+				String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
+				data2send += " receivedRecords="+receivedRecords+"i,filteredRecords="+filteredRecords+"i,sentPeriodicRecords=";
+				data2send += sentPeriodicRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
+				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
 				datagramSocket.send(packet);
 			}
     	}
@@ -267,9 +393,9 @@ public class ChangeDetector {
     private static ArgumentParser argParser() {
         @SuppressWarnings("deprecation")
 		ArgumentParser parser = ArgumentParsers
-            .newArgumentParser("kafka-stream-dispatcher")
+            .newArgumentParser(DEFAULT_APPLICATION_ID_CONFIG)
             .defaultHelp(true)
-            .description("This tool is used to dispatch kafka messages among topics.");
+            .description(DEFAULT_CLIENT_DESCRIPTION);
 
         parser.addArgument("--config")
     	    .action(store())
