@@ -3,14 +3,17 @@
 # Kafka components
 This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and cosume metrics. 
 
+[Utility components](#utility-components):
+- [Import Records](#import-records-component)
+
+[Processing components](#processing-components):
+- [Change Detector](#change-detector-component)
+- [Aggregator](#aggregator-component)
+
 [Consumer components](#consumer-components):
 - [InfluxDB UDP Consumer](#influxdb-udp-consumer)
 - [Mattermost Consumer](#mattermost-consumer)
 - [Email Consumer](#email-Consumer)
-
-[Aggregation components](#aggregation-components):
-- [Dispatcher](#dispatcher-component)
-- [Aggregator](#aggregator-component)
 
 ### Dependencies
 - Java > 1.8
@@ -26,6 +29,17 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
 ```
 
 The generated jar (`target/kafka-streams-o2-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
+
+## Utility Components
+(..)
+
+## Processing Components
+(...)
+
+
+
+
+
 
 ## Consumer Components
 Each consumer component retrieves messages from the Kafka cluster and forwards them to a specific external component.

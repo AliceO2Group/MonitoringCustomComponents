@@ -1,0 +1,26 @@
+general:
+   log4jfilename: configs/log4j-changedetector.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+
+   detector:
+   topic.input: <input-topic>
+   topic.output: <output-topic>
+   refresh.period.s: 30
+
+filter:
+   <measurement_0>: <filename1>
+   <measurement_1>: <filename1>
+   <measurement_1>: <filename3>
+   <measurement_2>: <filename1>
+   <measurement_2>: <filename0>
+   <measurement_4>: <filename0>
+   <measurement_6>: <filename4>
+   <measurement_3>: <filename2>
+   
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>

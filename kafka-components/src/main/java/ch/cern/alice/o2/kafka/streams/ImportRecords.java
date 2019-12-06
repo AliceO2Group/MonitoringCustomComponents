@@ -105,13 +105,7 @@ public final class ImportRecords {
 				public void process(String key, String lp) {
 					//System.out.println("\n\t\t\t topic: "+input_topic+" -> ('key','value') ('"+ key+"','"+lp+"')");
 					receivedRecords++;
-					if( statsEnabled ) {
-						try {
-							stats();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
+					stats();
 					for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
 						String k = klp.getKey().trim();
 						String v = klp.getValue().trim();
@@ -128,7 +122,6 @@ public final class ImportRecords {
 	}
 
 	public static void main(String[] args) throws Exception {
-		String stats_endpoint_hostname = null;
 		startMs = System.currentTimeMillis(); 
 		
         /* Parse command line argumets */
@@ -170,9 +163,9 @@ public final class ImportRecords {
 			logger.info("Stats Endpoint Port: "+statsEndpointPort);
 			logger.info("Stats Period: "+statsPeriodMs+"ms");
 			try {
-				statsAddress = InetAddress.getByName(stats_endpoint_hostname);
+				statsAddress = InetAddress.getByName(statsEndpointHostname);
 			} catch (IOException e) {
-				logger.error("Error opening creation address using hostname: "+stats_endpoint_hostname, e);
+				logger.error("Error opening creation address using hostname: "+statsEndpointHostname, e);
 			}
         }
 
@@ -222,18 +215,22 @@ public final class ImportRecords {
         System.exit(0);
 	}
 	
-	static void stats() throws IOException {
+	static void stats() {
 		long nowMs = System.currentTimeMillis();
 		if(receivedRecords < 0) receivedRecords = 0;
 		if(sentRecords < 0) sentRecords = 0;
     	if ( nowMs - startMs > statsPeriodMs) {
-			startMs = nowMs;
-    	    String hostname = InetAddress.getLocalHost().getHostName();
-			if(statsType.equals(STATS_TYPE_INFLUXDB)) {
-				String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
-				data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
-				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
-				datagramSocket.send(packet);
+			try{ 
+				startMs = nowMs;
+				String hostname = InetAddress.getLocalHost().getHostName();
+				if(statsType.equals(STATS_TYPE_INFLUXDB)) {
+					String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
+					data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
+					DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
+					datagramSocket.send(packet);
+				}
+			} catch (IOException e) {
+				logger.warn("Error stat: "+e.getMessage());
 			}
     	}
 	}
