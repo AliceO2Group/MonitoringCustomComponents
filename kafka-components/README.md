@@ -31,14 +31,206 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
 The generated jar (`target/kafka-streams-o2-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
 ## Utility Components
-(..)
+This category consists of all components are used to allow the processing and consumer components to execute.
+
+### Import Records Component
+This component acquire the input messages, using the InfluxDB Line protocol, and converts them using the following protocol:
+(Input) InfluxDB Line Protocol: `<measurement>,<tags> <field_name1>=<field_value1>,...,<field_nameN>=<field_valueN> <timestamp>`
+
+(Output) protocol: (key,value)
+- key: `<measurement_name>#<field_name>`
+- value: `<tags>#<field_value>#<timestamp>`
+
+The component manages also multiple field messages using the InfluxDB Line Protocol and splits them in multiple messages containing a single field. Both, key and value, are strings.
+
+#### Run
+The consumer can started using the following command:
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+ ch.cern.alice.o2.kafka.streams.ImportRecords \
+ --config configs/conf-import-records.yaml
+```
+#### Configuration file 
+A configuration file example is:
+
+```
+general:
+   log4jfilename: configs/log4j-import-records.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+
+import_config:
+   topic.input: <input-topic>
+   topic.output: <output-topic>
+
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>
+```
+
+Tab. 1
+
+| Section | First Keyword | Mandatory | Description | Default value |
+| --------| --------------| ----------| ----------- | ------------- |
+| *general* | -          | Yes    | Defines the start of 'general' configuration section | - |
+| *general* | *log4jfilename* | Yes | Log configuration filename | - |
+| *kafka_config* | - | Yes | Defines the start of 'kafka_config' configuration section | - |
+| *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
+| *import_config* | - | Yes | Defines the start of 'import_config' configuration section | 
+| *import_config* | *topic.input* | Yes | Topic where to read the InfluxDB Line Protocol messages | 
+| *import_config* | *topic.output* | Yes | Topic where to write messages using the internal procotol | 
+| *stats* | - | Yes | Defines the start of 'stats' configuration section | 
+| *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
+| *stats*  | *hostname* | No | Endpoint hostname | 
+| *stats*  | *port*   | No | Endpoint port |
+| *stats*  | *period_ms* | No | Statistic report period |
 
 ## Processing Components
-(...)
+Kafka components able to extract aggregated values starting from a set of raw data.
+
+### Change Detector Component
+This component extracts messages whose value is changed respect the last stored value and forward them to an output topic. Moreover, periodically it sends all stored values to the output topic. The component provides the possibility to select the pair `(measurement,field_name)` where apply the change detector functionality.
+
+#### Run
+The consumer can started using the following command:
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+ ch.cern.alice.o2.kafka.streams.ChangeDetector \
+ --config configs/conf-change-detector.yaml
+```
+#### Configuration file 
+A configuration file example is:
+
+```
+general:
+   log4jfilename: configs/log4j-change-detector.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+
+detector:
+   topic.input: <input-topic>
+   topic.output: <output-topic>
+   refresh.period.s: 30
+
+filter:
+   <measurement_0>: <field_name1>
+   <measurement_1>: <field_name1>
+   <measurement_1>: <field_name3>
+   <measurement_2>: <field_name1>
+   <measurement_2>: <field_name0>
+   <measurement_4>: <field_name0>
+   <measurement_6>: <field_name4>
+   <measurement_3>: <field_name2>
+   
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>
+```
+
+Tab. 2
+
+| Section | First Keyword | Mandatory | Description | Default value |
+| --------| --------------| ----------| ----------- | ------------- |
+| *general* | -          | Yes    | Defines the start of 'general' configuration section | - |
+| *general* | *log4jfilename* | Yes | Log configuration filename | - |
+| *kafka_config* | - | Yes | Defines the start of 'kafka_config' configuration section | - |
+| *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
+| *detector* | - | Yes | Defines the start of 'detector' configuration section | 
+| *detector* | *topic.input* | Yes | Topic where to read messages | 
+| *detector* | *topic.output* | Yes | Topic where to write detected messages | 
+| *detector* | *refresh.period.s* | No | Period, in seconds, used from the periodical sender to forward stored value to the output topic | 
+| * filter* | - | Yes | Defines the start of 'filter' configuration section | 
+| * filter* | `<measurement_name>:<field_name>` | Yes | Pair `(measurement,field_name)` where apply the change detector functionality | 
+| *stats* | - | Yes | Defines the start of 'stats' configuration section | 
+| *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
+| *stats*  | *hostname* | No | Endpoint hostname | 
+| *stats*  | *port*   | No | Endpoint port |
+| *stats*  | *period_ms* | No | Statistic report period |
+
+### Aggregation Components
+These components allow the aggregation of messages using the following four functions:
+- average
+- sum
+- minimum
+- maximum
+
+The messages are retrieved from and sent to a Kafka cluster, of course different topics must be used.
+Each aggregation function requires a dedicated topic for the processing:
+- the [Dispatcher component](#dispatcher-component) forwards messages to these topics
+- the [Aggregator components](#aggregator-component) process the aggregated values
 
 
+The results are sent to an output topic formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
+A measurement can be aggregated using only one aggregation function.
 
+This component executes a specific aggregation function on messages read from the dedicated topic.
+The topics used from the aggregators MUST have a single partition.
 
+#### Command
+The aggregation components can started using the following commands:
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorAvg \
+  --config configs/conf-aggr-avg.yaml
+```
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorSum \
+  --config configs/conf-aggr-sum.yaml
+```
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorMin \
+  --config configs/conf-aggr-min.yaml
+```
+
+```
+java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.AggregatorMax \
+  --config configs/conf-aggr-max.yaml
+```
+
+#### Configuration file 
+A configuration file example is:
+
+```
+general:
+   log4jfilename: configs/log4j-aggregator-XXX.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+   state.dir: <path-to-the-state-directory>
+   
+aggregation_config:
+   window_s: <window-in-seconds>
+   topic.input: <input-topic>
+   topic.output: <output-topic>
+```
+
+Tab. 4
+
+| Section | First Keyword | Mandatory | Description | Default value |
+| --------| --------------| ----------| ----------- | ------------- |
+| *general* | -          | Yes    | Defines the start of 'general' configuration section | - |
+| *general* | *log4jfilename* | Yes | Log configuration filename | - |
+| *kafka_config* | - | Yes | Defines the start of 'kafka_consumer' configuration section | - |
+| *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
+| *kafka_config* | *state.dir* | Yes | Directory where store the aggregation status | - |
+| *aggregation_config* | - | Yes | Defines the start of 'aggregation_config' configuration section | 
+| *aggregation_config* | *window_s* | Yes | Window time in seconds | 
+| *aggregation_config*  | *topic.input* | Yes | Topic where retrieve messages | 
+| *aggregation_config*  | *topic.output* | Yes | Topic where sent the aggregate values |
 
 
 ## Consumer Components
@@ -244,152 +436,3 @@ Tab. 3
 | *stats*  | *hostname* | No | Endpoint hostname | 
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
-
-
-## Aggregation Components
-These components allow the aggregation of messages using the following four functions:
-- average
-- sum
-- minimum
-- maximum
-
-The messages are retrieved from and sent to a Kafka cluster, of course different topics must be used.
-Each aggregation function requires a dedicated topic for the processing:
-- the [Dispatcher component](#dispatcher-component) forwards messages to these topics
-- the [Aggregator components](#aggregator-component) process the aggregated values
-
-
-The results are sent to an output topic formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
-A measurement can be aggregated using only one aggregation function.
-
-
-### Dispatcher Component
-This component forwards messages towards specific topics following rules descrived in a configuration file.
-
-#### Command
-The dispatcher can started using the following command:
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.Dispatcher \
-  --config configs/conf-disp.yaml
-```
-
-#### Configuration file 
-A configuration file example is:
-
-```
-general:
-   log4jfilename: configs/log4j-dispatcher.properties
-
-kafka_config:
-   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
-
-topics:
-   topic.input: <input-topic>
-   topic.avg: <avg-topic>
-   topic.sum: <sum-topic>
-   topic.min: <min-topic>
-   topic.max: <max-topic>
-   topic.default: <default-topic>
-   
-selection:
-   topic.avg:
-      -   measurement: meas0
-          removetags: hostname,cardid
-      -   measurement: meas1
-          removetags: hostname        
-   topic.min:
-      -   measurement: meas2
-          removetags: hostname,cardid
-      -   measurement: meas3         
-   topic.max:
-      -   measurement: meas4
-          removetags: cardid    
-   topic.sum:
-      -   measurement: meas5
-          removetags: hostname,cardid
-```
-
-Tab. 4
-
-| Section | First Keyword | Mandatory | Description | Default value |
-| --------| --------------| ----------| ----------- | ------------- |
-| *general* | -          | Yes    | Defines the start of 'general' configuration section | - |
-| *general* | *log4jfilename* | Yes | Log configuration filename | - |
-| *kafka_config* | - | Yes | Defines the start of 'kafka_consumer' configuration section | - |
-| *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
-| *topics*  | - | Yes | Defines the start of 'topic' configuration section | 
-| *topics*  | *topic.input*   | Yes | Topic where retrieves messages | 
-| *topics*  | *topic.avg*     | Yes | Topic where all measurements typed under the selection/avg section are forwarded to | 
-| *topics*  | *topic.sum*     | Yes | Topic where all measurements typed under the selection/sum section are forwarded to |
-| *topics*  | *topic.min*     | Yes | Topic where all measurements typed under the selection/min section are forwarded to |
-| *topics*  | *topic.max*     | Yes | Topic where all measurements typed under the selection/max section are forwarded to |
-| *topics*  | *topic.default* | Yes | Topic where all remaining measurements are forwarded to |
-| *selection* | - | Yes | Defines the start of 'selection' configuration section | 
-| *selection* | *topic.[avg,min,max,sum]* | No | Defines the section related to the selected topic (e.g. avg,min,...) | 
-| *selection* | *measurement* | Yes | Measurement name to forward | 
-| *selection* | *removetags* | No | Tags to remove during the aggregation phase | 
-
-
-### Aggregator Component
-This component executes a specific aggregation function on messages read from the dedicated topic.
-The topics used from the aggregators MUST have a single partition.
-
-#### Command
-The aggregation components can started using the following commands:
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorAvg \
-  --config configs/conf-aggr-avg.yaml
-```
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorSum \
-  --config configs/conf-aggr-sum.yaml
-```
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorMin \
-  --config configs/conf-aggr-min.yaml
-```
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorMax \
-  --config configs/conf-aggr-max.yaml
-```
-
-#### Configuration file 
-A configuration file example is:
-
-```
-general:
-   log4jfilename: configs/log4j-aggregator-XXX.properties
-
-kafka_config:
-   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
-   state.dir: <path-to-the-state-directory>
-   
-aggregation_config:
-   window_s: <window-in-seconds>
-   topic.input: <input-topic>
-   topic.output: <output-topic>
-```
-
-Tab. 4
-
-| Section | First Keyword | Mandatory | Description | Default value |
-| --------| --------------| ----------| ----------- | ------------- |
-| *general* | -          | Yes    | Defines the start of 'general' configuration section | - |
-| *general* | *log4jfilename* | Yes | Log configuration filename | - |
-| *kafka_config* | - | Yes | Defines the start of 'kafka_consumer' configuration section | - |
-| *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
-| *kafka_config* | *state.dir* | Yes | Directory where store the aggregation status | - |
-| *aggregation_config* | - | Yes | Defines the start of 'aggregation_config' configuration section | 
-| *aggregation_config* | *window_s* | Yes | Window time in seconds | 
-| *aggregation_config*  | *topic.input* | Yes | Topic where retrieve messages | 
-| *aggregation_config*  | *topic.output* | Yes | Topic where sent the aggregate values |
