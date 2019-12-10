@@ -31,20 +31,23 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
 The generated jar (`target/kafka-streams-o2-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
 
 ## Utility Components
-This category consists of all components are used to allow the processing and consumer components to execute.
+In this category belong all components used to allow the processing and consumer components to be executed.
 
 ### Import Records Component
-This component acquire the input messages, using the InfluxDB Line protocol, and converts them using the following protocol:
-(Input) InfluxDB Line Protocol: `<measurement>,<tags> <field_name1>=<field_value1>,...,<field_nameN>=<field_valueN> <timestamp>`
+This component converts input messages, using the InfluxDB Line Protocol, in the following internal protocol:
 
-(Output) protocol: (key,value)
+(Input) InfluxDB Line Protocol: `<measurement>,<tags> <field_name1>=<field_value1>,...,<field_nameN>=<field_valueN> <timestamp>`
+(Output) protocol: `(key,value)`
+
+Where:
 - key: `<measurement_name>#<field_name>`
 - value: `<tags>#<field_value>#<timestamp>`
 
-The component manages also multiple field messages using the InfluxDB Line Protocol and splits them in multiple messages containing a single field. Both, key and value, are strings.
+Both, key and value, are strings.
+The component is able to splits messagges containg multiple values in single value messages. 
 
 #### Run
-The consumer can started using the following command:
+The consumer can be started using the following command:
 
 ```
 java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
@@ -81,8 +84,8 @@ Tab. 1
 | *kafka_config* | - | Yes | Defines the start of 'kafka_config' configuration section | - |
 | *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
 | *import_config* | - | Yes | Defines the start of 'import_config' configuration section | 
-| *import_config* | *topic.input* | Yes | Topic where to read the InfluxDB Line Protocol messages | 
-| *import_config* | *topic.output* | Yes | Topic where to write messages using the internal procotol | 
+| *import_config* | *topic.input* | Yes | Topic where reads InfluxDB Line Protocol messages | 
+| *import_config* | *topic.output* | Yes | Topic where writes messages using the internal procotol | 
 | *stats* | - | Yes | Defines the start of 'stats' configuration section | 
 | *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
 | *stats*  | *hostname* | No | Endpoint hostname | 
@@ -90,13 +93,13 @@ Tab. 1
 | *stats*  | *period_ms* | No | Statistic report period |
 
 ## Processing Components
-Kafka components able to extract aggregated values starting from a set of raw data.
+Kafka components able to extract aggregated values starting from raw data.
 
 ### Change Detector Component
-This component extracts messages whose value is changed respect the last stored value and forward them to an output topic. Moreover, periodically it sends all stored values to the output topic. The component provides the possibility to select the pair `(measurement,field_name)` where apply the change detector functionality.
+This component extracts messages whose value is changed respect the last stored value and forwards them to an output topic. Moreover, periodically it sends all stored values to the output topic. The component provides the possibility to select the pair `(measurement,field_name)` where apply the change detector.
 
 #### Run
-The consumer can started using the following command:
+The consumer can be started using the following command:
 
 ```
 java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
@@ -116,7 +119,7 @@ kafka_config:
 detector:
    topic.input: <input-topic>
    topic.output: <output-topic>
-   refresh.period.s: 30
+   refresh.period.s: <period-in-seconds>
 
 filter:
    <measurement_0>: <field_name1>
@@ -146,9 +149,9 @@ Tab. 2
 | *detector* | - | Yes | Defines the start of 'detector' configuration section | 
 | *detector* | *topic.input* | Yes | Topic where to read messages | 
 | *detector* | *topic.output* | Yes | Topic where to write detected messages | 
-| *detector* | *refresh.period.s* | No | Period, in seconds, used from the periodical sender to forward stored value to the output topic | 
+| *detector* | *refresh.period.s* | No | Period, in seconds, used from the periodical sender to forward stored values to the output topic | 
 | * filter* | - | Yes | Defines the start of 'filter' configuration section | 
-| * filter* | `<measurement_name>:<field_name>` | Yes | Pair `(measurement,field_name)` where apply the change detector functionality | 
+| * filter* | `<measurement_name>:<field_name>` | Yes | Pair `(measurement,field_name)` where apply the change detector | 
 | *stats* | - | Yes | Defines the start of 'stats' configuration section | 
 | *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
 | *stats*  | *hostname* | No | Endpoint hostname | 
