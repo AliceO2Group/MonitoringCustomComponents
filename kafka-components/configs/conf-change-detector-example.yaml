@@ -7,7 +7,7 @@ kafka_config:
    detector:
    topic.input: <input-topic>
    topic.output: <output-topic>
-   refresh.period.s: 30
+   refresh.period.s: <period-in-seconds>
 
 filter:
    <measurement_0>: <field_name1>
