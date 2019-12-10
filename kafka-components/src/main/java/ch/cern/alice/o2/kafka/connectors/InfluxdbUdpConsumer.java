@@ -47,6 +47,11 @@ import java.io.File;
 import ch.cern.alice.o2.kafka.utils.YamlInfluxdbUdpConsumer;
 
 public class InfluxdbUdpConsumer {
+	private static String version = "0.1.1";
+	/*
+	Version 0.1.1 Variable overflow managing
+
+	*/
 	private static Logger logger = LoggerFactory.getLogger(InfluxdbUdpConsumer.class); 
 	private static String data_endpoint_port_str = "";
 	private static int [] data_endpoint_ports = null;
@@ -158,7 +163,8 @@ public class InfluxdbUdpConsumer {
     	
         KafkaConsumer<byte[],byte[]> consumer = new KafkaConsumer<byte[],byte[]>(props);
 		consumer.subscribe(Collections.singletonList(topicName));
-		
+		logger.info("Consumer version: "+version);
+     
         while (true) {
           	try {
            		ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
@@ -226,4 +232,4 @@ public class InfluxdbUdpConsumer {
 
         return parser;
     }
-}
+}	
