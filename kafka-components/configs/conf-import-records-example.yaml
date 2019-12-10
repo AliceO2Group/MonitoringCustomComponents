@@ -13,3 +13,4 @@ stats_config:
    hostname: <infludb-hostname>
    port: <influxdb-port>
    period_ms: <sample-period-in-milliseconds>
+
