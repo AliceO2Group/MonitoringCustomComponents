@@ -1,0 +1,16 @@
+general:
+   log4jfilename: configs/log4j-import-records.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+
+import_config:
+   topic.input: <input-topic>
+   topic.output: <output-topic>
+
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>
+
