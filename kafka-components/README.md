@@ -1,7 +1,7 @@
 
 
 # Kafka components
-This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and consume metrics. 
+This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate and consume metrics. 
 
 [Utility components](#utility-components):
 - [Import Records](#import-records-component)
