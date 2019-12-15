@@ -1,7 +1,7 @@
 
 
 # Kafka components
-This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and cosume metrics. 
+This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and consume metrics. 
 
 [Utility components](#utility-components):
 - [Import Records](#import-records-component)
@@ -163,7 +163,7 @@ Tab. 2
 | *stats*  | *period_ms* | No | Statistic report period |
 
 ### Aggregator Component
-The aggregation component process the input messages using the following four functions:
+The aggregation component processes input messages using the following four functions:
 - average
 - sum
 - minimum
@@ -300,7 +300,7 @@ stats_config:
    period_ms: <sample-period-in-milliseconds>
 ```
 
-Tab. 1
+Tab. 5
 
 | Section | First Keyword | Mandatory | Description | Default value |
 | --------| --------------| ----------| ----------- | ------------- |
@@ -372,7 +372,7 @@ stats_config:
    period_ms: <sample-period-in-milliseconds>
 ```
 
-Tab. 2
+Tab. 6
 
 | Section | First Keyword | Mandatory | Description | Default value |
 | --------| --------------| ----------| ----------- | ------------- |
@@ -439,7 +439,7 @@ stats_config:
    period_ms: <sample-period-in-milliseconds>
 ```
 
-Tab. 3
+Tab. 7
 
 | Section | First Keyword | Mandatory | Description | Default value |
 | --------| --------------| ----------| ----------- | ------------- |
