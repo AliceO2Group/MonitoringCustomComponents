@@ -4,7 +4,7 @@
   <groupId>ch.cern.alice.o2.kafka</groupId>
   <artifactId>kafka-streams-o2</artifactId>
   <packaging>jar</packaging>
-  <version>0.1</version>
+  <version>0.2</version>
   <name>kafka-streams-o2r</name>
   <url>http://maven.apache.org</url>
   <dependencies>

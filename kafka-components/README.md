@@ -1,13 +1,13 @@
 
 
 # Kafka components
-This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate, and cosume metrics. 
+This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate and consume metrics. 
 
 [Utility components](#utility-components):
 - [Import Records](#import-records-component)
 
 [Processing components](#processing-components):
-- [Change Detector](#change-detector-component)
+- [On Off](#on-off-component)
 - [Aggregator](#aggregator-component)
 
 [Consumer components](#consumer-components):
@@ -17,6 +17,9 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
 
 ### Dependencies
 - Java > 1.8
+
+### Version
+`export VERSION=0.2`
 
 ### Build
 1. Clone repository
@@ -28,7 +31,7 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
  mvn clean -e install -DskipTests 
 ```
 
-The generated jar (`target/kafka-streams-o2-0.1-jar-with-dependencies.jar`) includes all components and dependencies.
+The generated jar (`target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar`) includes all components and dependencies.
 
 ## Utility Components
 In this category belong all components used to allow the processing and consumer components to be executed.
@@ -50,7 +53,7 @@ The component is able to splits messagges containg multiple values in single val
 The consumer can be started using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar \
  ch.cern.alice.o2.kafka.streams.ImportRecords \
  --config configs/conf-import-records.yaml
 ```
@@ -95,14 +98,15 @@ Tab. 1
 ## Processing Components
 Kafka components able to extract aggregated values starting from raw data.
 
-### Change Detector Component
+### On Off Component
 This component extracts messages whose value is changed respect the last stored value and forwards them to an output topic. Moreover, periodically it sends all stored values to the output topic. The component provides the possibility to select the pair `(measurement,field_name)` where apply the change detector.
+The component is able to read only internal format messages generated using the [Import Records](#import-records-component).
 
 #### Run
 The consumer can be started using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar \
  ch.cern.alice.o2.kafka.streams.ChangeDetector \
  --config configs/conf-change-detector.yaml
 ```
@@ -151,74 +155,81 @@ Tab. 2
 | *detector* | *topic.output* | Yes | Topic where to write detected messages | 
 | *detector* | *refresh.period.s* | No | Period, in seconds, used from the periodical sender to forward stored values to the output topic | 
 | * filter* | - | Yes | Defines the start of 'filter' configuration section | 
-| * filter* | `<measurement_name>:<field_name>` | Yes | Pair `(measurement,field_name)` where apply the change detector | 
+| * filter* | `<measurement_name>:<field_name>` | Yes | Pair `(measurement,field_name)` where apply the on off component | 
 | *stats* | - | Yes | Defines the start of 'stats' configuration section | 
 | *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
 | *stats*  | *hostname* | No | Endpoint hostname | 
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
 
-### Aggregation Components
-These components allow the aggregation of messages using the following four functions:
+### Aggregator Component
+The aggregation component processes input messages using the following four functions:
 - average
 - sum
 - minimum
 - maximum
 
-The messages are retrieved from and sent to a Kafka cluster, of course different topics must be used.
-Each aggregation function requires a dedicated topic for the processing:
-- the [Dispatcher component](#dispatcher-component) forwards messages to these topics
-- the [Aggregator components](#aggregator-component) process the aggregated values
-
-
-The results are sent to an output topic formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
-A measurement can be aggregated using only one aggregation function.
-
-This component executes a specific aggregation function on messages read from the dedicated topic.
-The topics used from the aggregators MUST have a single partition.
+The component is able to read only internal format messages generated using the [Import Records](#import-records-component) and considers only numberic fields.
 
 #### Command
-The aggregation components can started using the following commands:
+The aggregation component can be started using the following commands:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorAvg \
-  --config configs/conf-aggr-avg.yaml
+java -cp target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar \
+  ch.cern.alice.o2.kafka.streams.Aggregator \
+  --config configs/conf-aggr.yaml
 ```
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorSum \
-  --config configs/conf-aggr-sum.yaml
-```
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorMin \
-  --config configs/conf-aggr-min.yaml
-```
-
-```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
-  ch.cern.alice.o2.kafka.streams.AggregatorMax \
-  --config configs/conf-aggr-max.yaml
-```
-
 #### Configuration file 
 A configuration file example is:
 
 ```
 general:
-   log4jfilename: configs/log4j-aggregator-XXX.properties
+   log4jfilename: configs/log4j-aggregator.properties
 
 kafka_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
    state.dir: <path-to-the-state-directory>
-   
+
 aggregation_config:
-   window_s: <window-in-seconds>
+   window.s: <period-in-seconds>
    topic.input: <input-topic>
    topic.output: <output-topic>
+
+avg_filter:
+   -   measurement: <measurement_name0>
+       field.name: <field_name0>
+       tags.remove: <tag_name0>
+   -   measurement: <measurement_name1>
+       field.name: <field_name1>,<field_name2>
+       tags.remove: <tag_name1>
+
+sum_filter:
+   -   measurement: <measurement_name3>
+       field.name: <field_name3>
+       tags.remove: <tag_name3>,<tag_name4>
+   -   measurement: <measurement_name5>
+       field.name: <field_name5>
+
+min_filter:
+   -   measurement: <measurement_name0>
+       field.name: <field_name0>
+       tags.remove: <tag_name0>
+   -   measurement: <measurement_name1>
+       field.name: <field_name1>,<field_name2>
+       tags.remove: <tag_name1>
+
+max_filter:
+   -   measurement: <measurement_name3>
+       field.name: <field_name3>
+       tags.remove: <tag_name3>,<tag_name4>
+   -   measurement: <measurement_name5>
+       field.name: <field_name5>
+
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>
 ```
 
 Tab. 4
@@ -234,6 +245,15 @@ Tab. 4
 | *aggregation_config* | *window_s* | Yes | Window time in seconds | 
 | *aggregation_config*  | *topic.input* | Yes | Topic where retrieve messages | 
 | *aggregation_config*  | *topic.output* | Yes | Topic where sent the aggregate values |
+| * avg/sum/min/max filter* | - | Yes | Defines the start of 'filter' configuration section | 
+| * avg/sum/min/max filter * | `<measurement>` | Yes | measurement name where apply the aggregation function | 
+| * avg/sum/min/max filter * | `<field.name>` | Yes | Comma separated fields to use | 
+| * avg/sum/min/max filter * | `<tags.remove>` | No | Tags to remove during the aggregation phase | 
+| *stats* | - | Yes | Defines the start of 'stats' configuration section | 
+| *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
+| *stats*  | *hostname* | No | Endpoint hostname | 
+| *stats*  | *port*   | No | Endpoint port |
+| *stats*  | *period_ms* | No | Statistic report period |
 
 
 ## Consumer Components
@@ -248,7 +268,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer can started using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar \
  ch.cern.alice.o2.kafka.connectors.InfluxdbUdpConsumer \
  --config configs/conf-influxdb-udp.yaml
 ```
@@ -280,7 +300,7 @@ stats_config:
    period_ms: <sample-period-in-milliseconds>
 ```
 
-Tab. 1
+Tab. 5
 
 | Section | First Keyword | Mandatory | Description | Default value |
 | --------| --------------| ----------| ----------- | ------------- |
@@ -326,7 +346,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer can started using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.MattermostConsumer  \
   --config configs/conf-mattermost.yaml
 ```
@@ -352,7 +372,7 @@ stats_config:
    period_ms: <sample-period-in-milliseconds>
 ```
 
-Tab. 2
+Tab. 6
 
 | Section | First Keyword | Mandatory | Description | Default value |
 | --------| --------------| ----------| ----------- | ------------- |
@@ -389,7 +409,7 @@ The component could be configured in order to send inner monitoring data to an I
 The consumer can started using the following command:
 
 ```
-java -cp target/kafka-streams-o2-0.1-jar-with-dependencies.jar \
+java -cp target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar \
   ch.cern.alice.o2.kafka.connectors.EmailConsumer  \
   --config configs/conf-email.yaml
 ```
@@ -419,7 +439,7 @@ stats_config:
    period_ms: <sample-period-in-milliseconds>
 ```
 
-Tab. 3
+Tab. 7
 
 | Section | First Keyword | Mandatory | Description | Default value |
 | --------| --------------| ----------| ----------- | ------------- |
