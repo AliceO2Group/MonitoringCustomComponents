@@ -89,6 +89,8 @@ public class KafkaLineProtocol {
 		if( this.vettMeasFieldname == null ){
 			String [] temp = this.key.split("#");
 			if(temp.length != 2){
+				logger.warn("key: "+this.key);
+				logger.warn("value: "+this.value);
 				throw new Exception("Bad key in LP: "+this.key+". Length: "+temp.length);
 			} 
 			this.vettMeasFieldname = temp;
@@ -100,6 +102,8 @@ public class KafkaLineProtocol {
 		if( this.vettTagFieldvalueTimestamp == null ){
 			String [] temp = this.value.split("#");
 			if(temp.length < 2 || temp.length > 3){
+				logger.warn("key: "+this.key);
+				logger.warn("value: "+this.value);
 				throw new Exception("Bad value in LP: "+this.value+". Length: "+temp.length);
 			} 
 			this.vettTagFieldvalueTimestamp = temp;
