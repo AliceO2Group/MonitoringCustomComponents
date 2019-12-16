@@ -44,14 +44,10 @@ import static net.sourceforge.argparse4j.impl.Arguments.store;
 import java.net.SocketException;
 import java.io.File;
 
+import ch.cern.alice.o2.kafka.utils.KafkaLineProtocol;
 import ch.cern.alice.o2.kafka.utils.YamlInfluxdbUdpConsumer;
 
 public class InfluxdbUdpConsumer {
-	private static String version = "0.1.1";
-	/*
-	Version 0.1.1 Variable overflow managing
-
-	*/
 	private static Logger logger = LoggerFactory.getLogger(InfluxdbUdpConsumer.class); 
 	private static String data_endpoint_port_str = "";
 	private static int [] data_endpoint_ports = null;
@@ -163,13 +159,12 @@ public class InfluxdbUdpConsumer {
     	
         KafkaConsumer<byte[],byte[]> consumer = new KafkaConsumer<byte[],byte[]>(props);
 		consumer.subscribe(Collections.singletonList(topicName));
-		logger.info("Consumer version: "+version);
-     
+		     
         while (true) {
           	try {
            		ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
 				receivedRecords += consumerRecords.count();
-				consumerRecords.forEach( record -> sendUdpData(record.value()));
+				consumerRecords.forEach( record -> sendUdpData(record.key(), record.value()));
 				//consumer.commitAsync();
 				if( stats_enabled ) stats();
 			} catch (RetriableCommitFailedException e) {
@@ -184,7 +179,15 @@ public class InfluxdbUdpConsumer {
 		}
 	}
 	
-	private static void sendUdpData(byte[] data2send) {
+	private static byte[] convertData(byte[] key, byte[] value){
+		return new KafkaLineProtocol(new String(key),
+									 new String(value))
+									 .getLineProtocol()
+									 .getBytes();
+	}
+	
+	private static void sendUdpData(byte[] key, byte[] value) {
+		byte [] data2send = convertData(key,value);
 		if (data2send.length > 0){
 			try {
 				if(++data_endpoint_ports_index >= data_endpoint_ports_size) data_endpoint_ports_index = 0;
@@ -204,16 +207,16 @@ public class InfluxdbUdpConsumer {
 		long nowMs = System.currentTimeMillis();
 		if(receivedRecords < 0) receivedRecords = 0;
 		if(sentRecords < 0) sentRecords = 0;
-    	if ( nowMs - startMs > stats_period_ms) {
+		if ( nowMs - startMs > stats_period_ms) {
 			startMs = nowMs;
-    	    String hostname = InetAddress.getLocalHost().getHostName();
+			String hostname = InetAddress.getLocalHost().getHostName();
 			if(stats_type.equals(STATS_TYPE_INFLUXDB)) {
 				String data2send = "kafka_consumer,endpoint_type=InfluxDB,endpoint="+data_endpoint_hostname+":"+data_endpoint_port_str.replace(',','|')+",hostname="+hostname+",topic="+topicName;
 				data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
 				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), stats_address, stats_endpoint_port);
 				datagramSocket.send(packet);
 			}
-    	}
+		}
 	}
     
 	private static ArgumentParser argParser() {
