@@ -163,7 +163,6 @@ public class Aggregator {
 		String timestamp = ""+key.window().end()+"000000";
 		String newKey = measurement+"#"+field+"_"+op;
 		String newValue = tags+"#"+value+"#"+timestamp;
-		System.out.println("newKey: "+newKey+" newvalue: "+newValue);
 		return new KeyValue<String,String>(newKey, newValue);
 	}
 
