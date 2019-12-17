@@ -86,7 +86,7 @@ public final class OnOff {
 	/* Process components' name */
 	private static String CHANGELOG_STORE_NAME = "changeLogStore5";
 	private static String SOURCE_PROCESSOR_NAME = "sourceProcessorComponent";
-	private static String FILTER_PROCESSOR_NAME = "FilterProcessorComponent";
+	//private static String FILTER_PROCESSOR_NAME = "FilterProcessorComponent";
 	private static String CHANGELOG_PROCESSOR_NAME = "ChangeLogProcessorComponent";
 	private static String SINK_PROCESSOR_NAME = "sinkProcessorComponent";
 	
@@ -106,7 +106,7 @@ public final class OnOff {
 
 	private static String THREAD_NAME = "change-detector-shutdown-hook2";
 
-	static class FilterProcessorSupplier implements ProcessorSupplier<String, String> {
+	/* static class FilterProcessorSupplier implements ProcessorSupplier<String, String> {
 		/*
 		*  Input Record has this format
 		*  String mfKey    = meas#fieldName
@@ -115,7 +115,7 @@ public final class OnOff {
 		*  ## Variable description:   
 		*  String tags = tagKey1=tagValue1,....,TagKeyN=TagValueN
 		*  String timestamp = <optional>
-		*/
+		
 		
 		@Override
 		public Processor<String,String> get(){
@@ -148,7 +148,7 @@ public final class OnOff {
 				public void close() {}
   			};
 		}
-	}
+	} */
 
 	static String getLineProtocolFromEntryStateStore(final KeyValue<String, String> entry, final long timestamp) throws Exception {
 		/* 
@@ -167,7 +167,7 @@ public final class OnOff {
 		return lp;							
 	}
 
-	static class changeLogProcessorSupplier implements ProcessorSupplier<String, String> {
+	static class OnOffProcessorSupplier implements ProcessorSupplier<String, String> {
 		/*
 		*  Input Record has this format
 		*  String  mfKey   = meas#fieldName
@@ -325,10 +325,10 @@ public final class OnOff {
 		builder.addSource(SOURCE_PROCESSOR_NAME, input_topic)
 
 				// add the FilterProcessorSupplier node which takes records from the source processor and filters them
-				.addProcessor(FILTER_PROCESSOR_NAME,  new FilterProcessorSupplier(), SOURCE_PROCESSOR_NAME)
+				//.addProcessor(FILTER_PROCESSOR_NAME,  new FilterProcessorSupplier(), SOURCE_PROCESSOR_NAME)
 
 				// add the changeLogProcessorSupplier node which takes data from filterProcessor node and evaluates changes
-				.addProcessor(CHANGELOG_PROCESSOR_NAME, new changeLogProcessorSupplier(), FILTER_PROCESSOR_NAME)
+				.addProcessor(CHANGELOG_PROCESSOR_NAME, new OnOffProcessorSupplier(), SOURCE_PROCESSOR_NAME)
 
 				// add the change log store associated with the changeLogProcessor node
 				.addStateStore(kvStore, CHANGELOG_PROCESSOR_NAME)
@@ -363,24 +363,26 @@ public final class OnOff {
 	}
 	static void stats() throws IOException {
 		final long nowMs = System.currentTimeMillis();
-		if(receivedRecords < 0) receivedRecords = 0;
-		if(sentRecords < 0) sentRecords = 0;
-    	if ( nowMs - startMs > statsPeriodMs) {
-			try{ 
-				startMs = nowMs;
-				final String hostname = InetAddress.getLocalHost().getHostName();
-				if(statsType.equals(STATS_TYPE_INFLUXDB)) {
-					String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
-					data2send += " receivedRecords="+receivedRecords+"i,filteredRecords="+filteredRecords+"i,sentPeriodicRecords=";
-					data2send += sentPeriodicRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
-					final DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
-					datagramSocket.send(packet);
-				} 
-			} catch (final IOException e) {
-				logger.warn("Error stat: "+e.getMessage());
-			
+		if( statsEnabled){
+			if(receivedRecords < 0) receivedRecords = 0;
+			if(sentRecords < 0) sentRecords = 0;
+			if ( nowMs - startMs > statsPeriodMs) {
+				try{ 
+					startMs = nowMs;
+					final String hostname = InetAddress.getLocalHost().getHostName();
+					if(statsType.equals(STATS_TYPE_INFLUXDB)) {
+						String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
+						data2send += " receivedRecords="+receivedRecords+"i,filteredRecords="+filteredRecords+"i,sentPeriodicRecords=";
+						data2send += sentPeriodicRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
+						final DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
+						datagramSocket.send(packet);
+					} 
+				} catch (final IOException e) {
+					logger.warn("Error stat: "+e.getMessage());
+				
+				}
 			}
-    	}
+		}
 	}
     
     private static ArgumentParser argParser() {

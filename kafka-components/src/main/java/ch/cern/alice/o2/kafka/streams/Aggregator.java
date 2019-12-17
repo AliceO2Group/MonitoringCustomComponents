@@ -51,7 +51,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Properties;
@@ -78,8 +77,9 @@ public class Aggregator {
 	private static long sentRecords = 0;
 	private static long startMs = 0;
 
-	//private static Set<String> allowedFieldMeas = new HashSet<String>();
-	//private static Map<String,Set<String>> tagsToRemove = new HashMap<String,Set<String>>();
+	private static String KEY_SEPARATOR = "#";
+	private static String FIELD_SEPARATOR = ",";
+	private static String TAG_SEPARATOR = ",";
 
 	/* Aggregator default configuration */
 	private static final long AGGREGATOR_DEFAULT_GRACE_DURATION_S = 10;
@@ -146,24 +146,9 @@ public class Aggregator {
 		return data;
 	}
 
-	public static KeyValue<String, String> extractKeyValue(Windowed<String> key, Double value, String op) {
-		String oldKey = key.key();
-		String [] fields = oldKey.split("#");
-		if( fields.length != 2){
-			logger.warn("oldKey: "+oldKey+"  not compliant.");
-			return new KeyValue<String,String>(null, null);
-		}
-		String [] measTags = fields[0].split(",");
-		String measurement = measTags[0];
-		String tags = "";
-		if(measTags.length > 1){
-			tags = String.join(",", Arrays.copyOfRange(measTags, 1, measTags.length));
-		} 
-		String field = fields[1];
-		String timestamp = ""+key.window().end()+"000000";
-		String newKey = measurement+"#"+field+"_"+op;
-		String newValue = tags+"#"+value+"#"+timestamp;
-		return new KeyValue<String,String>(newKey, newValue);
+	public static KeyValue<String,String> getLineProtocol(Windowed<String> key, Double value, String op) {
+		String lp = key.key().replace("#", " ")+"_"+op+"="+value.toString()+" "+key.window().end()+"000000";
+		return new KeyValue<String,String>(key.key(),lp);
 	}
 
 	public static Map<String,Set<String>> getTagToRemove( List<Map<String,String>> filterConfig ){
@@ -177,21 +162,25 @@ public class Aggregator {
 					System.exit(1);
 				}
 				String meas = entry.get(ARGPARSE_SELECTION_MEASUREMENT_KEY);
-				String [] fields = entry.get(ARGPARSE_SELECTION_FIELDNAME_KEY).split(",");
+				String [] fields = entry.get(ARGPARSE_SELECTION_FIELDNAME_KEY).split(FIELD_SEPARATOR);
 				String tagsRemove = entry.getOrDefault(ARGPARSE_SELECTION_TAGSREMOVE_KEY,"");
 				//System.out.println(""+entry);
 				for( String fieldName: fields){
 					Set<String> setTagsRemove = new HashSet<String>();
 					if( tagsRemove != null){
-						for( String tag: tagsRemove.split(",")){ 
+						for( String tag: tagsRemove.split(TAG_SEPARATOR)){ 
 							setTagsRemove.add(tag);
 						}
 					}
-					tagsToRemove.put(meas+"#"+fieldName,setTagsRemove);
+					tagsToRemove.put(generateKey(meas,fieldName),setTagsRemove);
 				}
 			}
 		}
 		return tagsToRemove;
+	}
+
+	public static String generateKey( String meas, String field){
+		return new String(meas + KEY_SEPARATOR + field).trim();
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -288,7 +277,7 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1.add(v2) )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value.getAverage(),AVG_FUNCTION_NAME)); 
+    				.map((key,value) -> getLineProtocol(key,value.getAverage(),AVG_FUNCTION_NAME)); 
         	avg_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
@@ -296,7 +285,7 @@ public class Aggregator {
 
 		// SUM Function
         try {
-			KStream<String, String> avg_aggr_stream = input_data
+			KStream<String, String> sum_aggr_stream = input_data
 					.filter( (key,value) -> filterRecords(key,value,sumAllowedFieldMeas))
 					.flatMap((key,value) -> manageTagsAndValue(key,value,sumTagsToRemove))
 					.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
@@ -304,15 +293,15 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 + v2 )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value,SUM_FUNCTION_NAME)); 
-        	avg_aggr_stream.to(output_topic);
+    				.map((key,value) -> getLineProtocol(key,value,SUM_FUNCTION_NAME)); 
+        	sum_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
 		}
 
 		// MIN Function
         try {
-			KStream<String, String> avg_aggr_stream = input_data
+			KStream<String, String> min_aggr_stream = input_data
 					.filter( (key,value) -> filterRecords(key,value,minAllowedFieldMeas))
 					.flatMap((key,value) -> manageTagsAndValue(key,value,minTagsToRemove))
 					.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
@@ -320,15 +309,15 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 < v2 ? v1 : v2 )        
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value,MIN_FUNCTION_NAME)); 
-        	avg_aggr_stream.to(output_topic);
+    				.map((key,value) -> getLineProtocol(key,value,MIN_FUNCTION_NAME)); 
+        	min_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
 		}
 
 		// MAX Function
         try {
-			KStream<String, String> avg_aggr_stream = input_data
+			KStream<String, String> max_aggr_stream = input_data
 					.filter( (key,value) -> filterRecords(key,value,maxAllowedFieldMeas))
 					.flatMap((key,value) -> manageTagsAndValue(key,value,maxTagsToRemove))
 					.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
@@ -336,8 +325,8 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 > v2 ? v1 : v2 )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value,MAX_FUNCTION_NAME)); 
-        	avg_aggr_stream.to(output_topic);
+    				.map((key,value) -> getLineProtocol(key,value,MAX_FUNCTION_NAME)); 
+        	max_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
 		}

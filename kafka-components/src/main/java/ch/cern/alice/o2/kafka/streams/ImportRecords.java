@@ -18,11 +18,11 @@ package ch.cern.alice.o2.kafka.streams;
 
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.processor.Processor;
-import org.apache.kafka.streams.processor.ProcessorSupplier;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.kstream.KStream;
 import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +42,22 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import ch.cern.alice.o2.kafka.utils.KafkaLineProtocol;
 import ch.cern.alice.o2.kafka.utils.YamlImportRecordsConfig;
 
 public final class ImportRecords {
+	private static Set<String> databaseFilterConfig = null;
+	private static Set<String> onOffFilterConfig    = null;
+	private static Set<String> aggregatorFilterConfig = null;
+
 	private static String statsEndpointHostname = "";
 	private static int statsEndpointPort = 0;
 	private static String statsType;
@@ -58,21 +66,24 @@ public final class ImportRecords {
 	private static boolean statsEnabled = false;
 	private static DatagramSocket datagramSocket;
 	private static long receivedRecords = 0;
-	private static long sentRecords = 0;
+	private static long sentDbRecords = 0;
+	private static long sentOnOffRecords = 0;
+	private static long sentAggrRecords = 0;
 	private static long startMs = 0;
-	private static String input_topic = "";
-	private static String output_topic = "";
+
+	private static String KEY_SEPARATOR = "#";
+	private static String FIELD_SEPARATOR = ",";
+	private static String TAG_SEPARATOR = ",";
 
 	private static Logger logger = LoggerFactory.getLogger(ImportRecords.class); 
     private static String ARGPARSE_CONFIG = "config";
     private static String GENERAL_LOGFILENAME_CONFIG = "log4jfilename";
     private static String TOPICS_INPUT_CONFIG = "topic.input";
-	private static String TOPICS_OUTPUT_CONFIG = "topic.output";
-	
-	/* Process components' name */
-	private static String SOURCE_PROCESSOR_NAME = "sourceProcessorComponent";
-	private static String IMPORT_PROCESSOR_NAME = "importProcessorComponent";
-	private static String SINK_PROCESSOR_NAME = "sinkProcessorComponent";
+	private static String TOPICS_OUTPUT_DATABASE_CONFIG = "topic.output.database";
+	private static String TOPICS_OUTPUT_ONOFF_CONFIG = "topic.output.onoff";
+	private static String TOPICS_OUTPUT_AGGREGATOR_CONFIG = "topic.output.aggregator";
+	private static String ARGPARSE_SELECTION_MEASUREMENT_KEY = "measurement";
+	private static String ARGPARSE_SELECTION_FIELDNAME_KEY = "field.name";
 	
 	/* Stats parameters */
 	private static final String STATS_TYPE_INFLUXDB = "influxdb";
@@ -89,38 +100,70 @@ public final class ImportRecords {
 
 	private static String THREAD_NAME = "import-records-shutdown-hook";
 
-	static class importProcessorSupplier implements ProcessorSupplier<String, String> {
-		@Override
-		public Processor<String,String> get(){
-			return new Processor<String,String>(){
-				private ProcessorContext context;
-			
-				@Override
-				//@SuppressWarnings("unchecked")
-				public void init( final ProcessorContext context){
-					this.context = context;	
-				}
-				
-				@Override
-				public void process(String key, String lp) {
-					//System.out.println("\n\t\t\t topic: "+input_topic+" -> ('key','value') ('"+ key+"','"+lp+"')");
-					receivedRecords++;
-					stats();
-					for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
-						String k = klp.getKey().trim();
-						String v = klp.getValue().trim();
-						context.forward(k,v);
-						sentRecords++;
-						//System.out.println("\t\t\t ('key','value') ('"+klp.getKey()+"','"+klp.getValue()+"') -> topic: "+output_topic+"");
-					}
-				}
-	  
-				@Override
-				public void close() {}
-  			};
+	public static List<String> getFilteredDatabaseRecords(String lp){
+		List<String> records = new ArrayList<String>();
+		for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
+			receivedRecords++;
+			String k = klp.getKey();
+			if(databaseFilterConfig.contains(k)){
+				records.add(klp.getLineProtocol());
+				sentDbRecords++;
+			}
 		}
+		return records;
 	}
 
+	public static List<KeyValue<String,String>> getFilteredOnOffRecords(String lp){
+		List<KeyValue<String,String>> records = new ArrayList<KeyValue<String,String>>();
+		for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
+			String k = klp.getKey();
+			String v = klp.getValue();
+			if(onOffFilterConfig.contains(k)){
+				records.add( new KeyValue<String,String>(k,v));
+				sentOnOffRecords++;
+			}
+		}
+		return records;
+	}
+
+	public static List<KeyValue<String,String>> getFilteredAggregatorRecords(String lp){
+		List<KeyValue<String,String>> records = new ArrayList<KeyValue<String,String>>();
+		for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
+			String k = klp.getKey();
+			String v = klp.getValue();
+			if(aggregatorFilterConfig.contains(k)){
+				records.add( new KeyValue<String,String>(k,v));
+				sentAggrRecords++;
+			}
+		}
+		return records;
+	}
+
+	public static String generateKey( String meas, String field){
+		return new String(meas + KEY_SEPARATOR + field).trim();
+	}
+
+	public static Set<String> getFilterConfigration( List<Map<String,String>> filterConfig ){
+		Set<String> filterConf = new HashSet<String>();
+		if( filterConfig == null){
+			return filterConf;
+		}
+		for ( Map<String,String> entry: filterConfig){
+			if( !(entry.containsKey(ARGPARSE_SELECTION_MEASUREMENT_KEY) && (entry.containsKey(ARGPARSE_SELECTION_FIELDNAME_KEY)))){
+				String msg = "Selection section of the configuragion file not well written.";
+				msg += "Miss "+ARGPARSE_SELECTION_MEASUREMENT_KEY+" and/or "+ARGPARSE_SELECTION_FIELDNAME_KEY+ ": "+entry;
+				logger.error(msg);
+				// Exit due to configuration file not well written
+				System.exit(1);
+			}
+			String meas = entry.get(ARGPARSE_SELECTION_MEASUREMENT_KEY);
+			String [] fields = entry.get(ARGPARSE_SELECTION_FIELDNAME_KEY).split(FIELD_SEPARATOR);
+			for( String fieldName: fields){
+				filterConf.add(generateKey(meas,fieldName));
+			}
+		}
+		return filterConf;
+	}
 	public static void main(String[] args) throws Exception {
 		startMs = System.currentTimeMillis(); 
 		
@@ -137,28 +180,49 @@ public final class ImportRecords {
 		String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
 		PropertyConfigurator.configure(log4jfilename);
 		
-		Map<String,String> import_config = config.getImport_config();
-		Map<String,String> statsConfig = config.getStats_config();
-
-		input_topic = import_config.get(TOPICS_INPUT_CONFIG);
-		output_topic = import_config.get(TOPICS_OUTPUT_CONFIG);
-		logger.info("import_config.topics.input: " + input_topic);
-		logger.info("import_config.topics.output: " + output_topic);
+		// Kafka configuration section
+		Map<String,String> kafka_config = config.getKafka_config();
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
 		
+		// Component configuration section
+		Map<String,String> component_config = config.getComponent_config();
+		String input_topic = component_config.get(TOPICS_INPUT_CONFIG);
+		String output_database_topic = component_config.get(TOPICS_OUTPUT_DATABASE_CONFIG);
+		String output_onoff_topic = component_config.get(TOPICS_OUTPUT_ONOFF_CONFIG);
+		String output_aggregator_topic = component_config.get(TOPICS_OUTPUT_AGGREGATOR_CONFIG);
+		logger.info("component_config.topics.input: " + input_topic);
+		logger.info("component_config.topics.output.database: " + output_database_topic);
+		logger.info("component_config.topics.output.onoff: " + output_onoff_topic);
+		logger.info("component_config.topics.output.aggregator: " + output_aggregator_topic);
+		
+		// Filter configuration section
+		databaseFilterConfig = getFilterConfigration(config.getDatabase_filter());
+		onOffFilterConfig    = getFilterConfigration(config.getOnOff_filter());
+		aggregatorFilterConfig = getFilterConfigration(config.getAggregator_filter());
+		logger.info("databaseFilterConfig.set: " + databaseFilterConfig);
+		logger.info("onOffFilterConfig.set: " + onOffFilterConfig);
+		logger.info("aggregatorFilterConfig.set: " + aggregatorFilterConfig);
+
+		// Statistics configuration section
+		Map<String,String> statsConfig = config.getStats_config();
 		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
         statsType = DEFAULT_STATS_TYPE;
         statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
         statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
         statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
 		logger.info("Stats Enabled?: "+ statsEnabled);
-		
-		try {
-			datagramSocket = new DatagramSocket();
-		} catch (SocketException e) {
-			logger.error("Error while creating UDP socket", e);
-		}
-		
 		if( statsEnabled ) {
+			try {
+				datagramSocket = new DatagramSocket();
+			} catch (SocketException e) {
+				logger.error("Error while creating UDP socket", e);
+			}
 			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
 			logger.info("Stats Endpoint Port: "+statsEndpointPort);
 			logger.info("Stats Period: "+statsPeriodMs+"ms");
@@ -169,33 +233,34 @@ public final class ImportRecords {
 			}
         }
 
-		Map<String,String> kafka_config = config.getKafka_config();
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
-		
-		Topology builder = new Topology();
+		final StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> input_data = builder.stream(input_topic);
+		          
+		// database Filter
+        try {
+			input_data.flatMapValues( value -> getFilteredDatabaseRecords(value)).to(output_database_topic);
+        } catch (Exception e) {
+        	e.printStackTrace();
+		}
 
-		// add the source processor node that takes Kafka topic "source-topic" as input
-		builder.addSource(SOURCE_PROCESSOR_NAME, input_topic)
+		// onOff Filter
+        try {
+			input_data.flatMap( (key,value) -> getFilteredOnOffRecords(value)).to(output_onoff_topic);
+        } catch (Exception e) {
+        	e.printStackTrace();
+		}
 
-				// add the FilterProcessorSupplier node which takes records from the source processor and filters them
-				.addProcessor(IMPORT_PROCESSOR_NAME,  new importProcessorSupplier(), SOURCE_PROCESSOR_NAME)
-
-				// add the sink processor node that export data to the output_topic
-				.addSink(SINK_PROCESSOR_NAME, output_topic, IMPORT_PROCESSOR_NAME);
-
+		// aggregator Filter
+        try {
+			input_data.flatMap( (key,value) -> getFilteredAggregatorRecords(value)).to(output_aggregator_topic);
+        } catch (Exception e) {
+        	e.printStackTrace();
+		}
         
-		// generating the topology
-		logger.info(builder.describe().toString());
-
-		// constructing a streams client with the properties and topology
-        final KafkaStreams streams = new KafkaStreams(builder, props);
-        final CountDownLatch latch = new CountDownLatch(1);
+		final Topology topology = builder.build();
+        logger.info(topology.describe().toString());
+        final KafkaStreams streams = new KafkaStreams(topology, props);
+        final CountDownLatch latch = new CountDownLatch(10);
  
         // attach shutdown handler to catch control-c
         Runtime.getRuntime().addShutdownHook(new Thread(THREAD_NAME) {
@@ -214,25 +279,29 @@ public final class ImportRecords {
         }
         System.exit(0);
 	}
-	
+
 	static void stats() {
+		if(!statsEnabled) return;
 		long nowMs = System.currentTimeMillis();
-		if(receivedRecords < 0) receivedRecords = 0;
-		if(sentRecords < 0) sentRecords = 0;
-    	if ( nowMs - startMs > statsPeriodMs) {
+		if ( nowMs - startMs > statsPeriodMs) {
+			if(receivedRecords < 0) receivedRecords = 0;
+			if(sentDbRecords < 0) sentDbRecords = 0;
+			if(sentOnOffRecords < 0) sentOnOffRecords = 0;
+			if(sentAggrRecords < 0) sentAggrRecords = 0;
 			try{ 
 				startMs = nowMs;
 				String hostname = InetAddress.getLocalHost().getHostName();
 				if(statsType.equals(STATS_TYPE_INFLUXDB)) {
 					String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
-					data2send += " receivedRecords="+receivedRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
+					data2send += " receivedRecords="+receivedRecords+"i,sentDatabaseRecords="+sentDbRecords;
+					data2send += "i,sentOnOffRecords="+sentOnOffRecords+"i,sentAggregatorRecords="+sentAggrRecords+"i "+nowMs+"000000";
 					DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
 					datagramSocket.send(packet);
 				}
 			} catch (IOException e) {
 				logger.warn("Error stat: "+e.getMessage());
 			}
-    	}
+		}
 	}
     
     private static ArgumentParser argParser() {

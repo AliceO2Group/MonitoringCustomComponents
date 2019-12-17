@@ -164,7 +164,7 @@ public class InfluxdbUdpConsumer {
           	try {
            		ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(POLLING_PERIOD_MS);
 				receivedRecords += consumerRecords.count();
-				consumerRecords.forEach( record -> sendUdpData(record.key(), record.value()));
+				consumerRecords.forEach( record -> sendUdpData(record.value()));
 				//consumer.commitAsync();
 				if( stats_enabled ) stats();
 			} catch (RetriableCommitFailedException e) {
@@ -179,15 +179,7 @@ public class InfluxdbUdpConsumer {
 		}
 	}
 	
-	private static byte[] convertData(byte[] key, byte[] value){
-		return new KafkaLineProtocol(new String(key),
-									 new String(value))
-									 .getLineProtocol()
-									 .getBytes();
-	}
-	
-	private static void sendUdpData(byte[] key, byte[] value) {
-		byte [] data2send = convertData(key,value);
+	private static void sendUdpData(byte[] data2send) {
 		if (data2send.length > 0){
 			try {
 				if(++data_endpoint_ports_index >= data_endpoint_ports_size) data_endpoint_ports_index = 0;
