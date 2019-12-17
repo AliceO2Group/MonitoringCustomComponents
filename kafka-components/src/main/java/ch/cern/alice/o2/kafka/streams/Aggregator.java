@@ -51,6 +51,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Properties;
@@ -129,13 +130,7 @@ public class Aggregator {
 	}
 
 	public static List<KeyValue<String, Double>> manageTagsAndValue( String mfKey, String tvtValue, Map<String,Set<String>> tagsToRemove){
-		if( statsEnabled ) {
-			try {
-				stats();
-			} catch (IOException e) {
-				logger.warn(e.getMessage());
-			}
-		}
+		stats();
 		//System.out.println("\n\t\t\tMMM -> key: '"+mfKey+"','"+tvtValue+"'");
 		List<KeyValue<String, Double>> data = new ArrayList<KeyValue<String, Double>>();
 		KafkaLineProtocol klp = new KafkaLineProtocol(mfKey, tvtValue);
@@ -151,10 +146,24 @@ public class Aggregator {
 		return data;
 	}
 
-	public static String getLineProtocol(Windowed<String> key, Double value, String op) {
-		//System.out.println("\n\t\t\tGGG -> end: "+key.window().end()+" now: "+System.currentTimeMillis()+" diff: "+(key.window().end()-System.currentTimeMillis())+" ms");
-		String lp = key.key().replace("#", " ")+"_"+op+"="+value.toString()+" "+key.window().end()+"000000";
-		return lp;
+	public static KeyValue<String, String> extractKeyValue(Windowed<String> key, Double value, String op) {
+		String oldKey = key.key();
+		String [] fields = oldKey.split("#");
+		if( fields.length != 2){
+			logger.warn("oldKey: "+oldKey+"  not compliant.");
+			return new KeyValue<String,String>(null, null);
+		}
+		String [] measTags = fields[0].split(",");
+		String measurement = measTags[0];
+		String tags = "";
+		if(measTags.length > 1){
+			tags = String.join(",", Arrays.copyOfRange(measTags, 1, measTags.length));
+		} 
+		String field = fields[1];
+		String timestamp = ""+key.window().end()+"000000";
+		String newKey = measurement+"#"+field+"_"+op;
+		String newValue = tags+"#"+value+"#"+timestamp;
+		return new KeyValue<String,String>(newKey, newValue);
 	}
 
 	public static Map<String,Set<String>> getTagToRemove( List<Map<String,String>> filterConfig ){
@@ -279,7 +288,7 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1.add(v2) )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value.getAverage(),AVG_FUNCTION_NAME))); 
+    				.map((key,value) -> extractKeyValue(key,value.getAverage(),AVG_FUNCTION_NAME)); 
         	avg_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
@@ -295,7 +304,7 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 + v2 )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value,SUM_FUNCTION_NAME))); 
+    				.map((key,value) -> extractKeyValue(key,value,SUM_FUNCTION_NAME)); 
         	avg_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
@@ -311,7 +320,7 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 < v2 ? v1 : v2 )        
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value,MIN_FUNCTION_NAME))); 
+    				.map((key,value) -> extractKeyValue(key,value,MIN_FUNCTION_NAME)); 
         	avg_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
@@ -327,7 +336,7 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 > v2 ? v1 : v2 )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> new KeyValue<String,String>(key.toString(),getLineProtocol(key,value,MAX_FUNCTION_NAME))); 
+    				.map((key,value) -> extractKeyValue(key,value,MAX_FUNCTION_NAME)); 
         	avg_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
@@ -357,23 +366,29 @@ public class Aggregator {
         }
         System.exit(0);
     }
-    
-    static void stats() throws IOException {
-		long nowMs = System.currentTimeMillis();
-		if(receivedRecords < 0) receivedRecords = 0;
-		if(sentRecords < 0) sentRecords = 0;
-		if(filteredRecords < 0) filteredRecords = 0;
-		if ( nowMs - startMs > statsPeriodMs) {
-			startMs = nowMs;
-    	    String hostname = InetAddress.getLocalHost().getHostName();
-			if(statsType.equals(STATS_TYPE_INFLUXDB)) {
-				String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
-				data2send += " receivedRecords="+receivedRecords+"i,filteredRecords="+filteredRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
-				DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
-				datagramSocket.send(packet);
+	
+	static void stats() {
+		if (statsEnabled){
+			final long nowMs = System.currentTimeMillis();
+			if(receivedRecords < 0) receivedRecords = 0;
+			if(sentRecords < 0) sentRecords = 0;
+			if ( nowMs - startMs > statsPeriodMs) {
+				try{ 
+					startMs = nowMs;
+					final String hostname = InetAddress.getLocalHost().getHostName();
+					if(statsType.equals(STATS_TYPE_INFLUXDB)) {
+						String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
+						data2send += " receivedRecords="+receivedRecords+"i,filteredRecords="+filteredRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
+						final DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
+						datagramSocket.send(packet);
+					} 
+				} catch (final IOException e) {
+					logger.warn("Error stat: "+e.getMessage());
+				
+				}
 			}
-    	}
-	}          
+		}
+	}
 
     private static ArgumentParser argParser() {
         @SuppressWarnings("deprecation")
