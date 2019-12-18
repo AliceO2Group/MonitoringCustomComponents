@@ -68,7 +68,6 @@ public final class OnOff {
 	private static boolean statsEnabled = false;
 	private static DatagramSocket datagramSocket;
 	private static long receivedRecords = 0;
-	private static long filteredRecords = 0;
 	private static long sentPeriodicRecords = 0;
 	private static long sentRecords = 0;
 	private static long startMs = 0;
@@ -211,19 +210,19 @@ public final class OnOff {
 		final String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
 		PropertyConfigurator.configure(log4jfilename);
 		
+		// Component configuration section 
 		final Map<String,String> detector = config.getDetector();
-		final Map<String,String> statsConfig = config.getStats_config();
-
 		final String input_topic = detector.get(TOPICS_INPUT_CONFIG);
 		final String output_topic = detector.get(TOPICS_OUTPUT_CONFIG);
 		refresh_period_s = Integer.parseInt(detector.get(REFRESH_PERIOD_S_CONFIG));
-				
 		logger.info("detector.topics.input: " + input_topic);
 		logger.info("detector.topics.output: " + output_topic);
 		logger.info("detector.refresh.period.s: " + refresh_period_s);
 		logger.info("filter.measurements: " + allowedMeas);
 		logger.info("filter.field_measurements: " + allowedFieldMeas);
 
+		// Statistic configuration section
+		final Map<String,String> statsConfig = config.getStats_config();
 		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
         logger.info("Stats Enabled?: "+ statsEnabled);
 		
@@ -247,6 +246,7 @@ public final class OnOff {
 			}
         }
 
+		// Kafka configuration section
 		final Map<String,String> kafka_config = config.getKafka_config();
 		final Properties props = new Properties();
 		props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, DEFAULT_REPLICATION_FACTOR);

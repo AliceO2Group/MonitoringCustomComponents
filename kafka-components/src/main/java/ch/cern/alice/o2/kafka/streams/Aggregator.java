@@ -124,20 +124,15 @@ public class Aggregator {
 		*  String timestamp = <optional>
 	*/
 	public static Boolean filterRecords(String mfKey, String tvtValue, Set<String> allowedFieldMeas){
-		//Boolean qwe = allowedFieldMeas.contains(mfKey);
-		//System.out.println("\n\t\t\tFFFF -> key: '"+mfKey+"','"+tvtValue+"' pass?: "+qwe);
-        return allowedFieldMeas.contains(mfKey);
+		return allowedFieldMeas.contains(mfKey);
 	}
 
 	public static List<KeyValue<String, Double>> manageTagsAndValue( String mfKey, String tvtValue, Map<String,Set<String>> tagsToRemove){
 		stats();
-		//System.out.println("\n\t\t\tMMM -> key: '"+mfKey+"','"+tvtValue+"'");
 		List<KeyValue<String, Double>> data = new ArrayList<KeyValue<String, Double>>();
 		KafkaLineProtocol klp = new KafkaLineProtocol(mfKey, tvtValue);
 		klp.removeTags(tagsToRemove.get(mfKey));
-		//System.out.println("\t\t\tMMM -> after removed tags key: '"+klp.getKey()+"','"+klp.getValue()+"'");
 		Double doubleValue = klp.getDoublefieldValue();
-		//System.out.println("\t\t\tMMM -> double value: '"+doubleValue+" and key: "+klp.getMeasTagFieldKey());
 		if( doubleValue != null){
 			KeyValue<String,Double> newKeyValue = new KeyValue<String,Double>(klp.getMeasTagFieldKey(),doubleValue);
 			data.add(newKeyValue);
@@ -164,7 +159,6 @@ public class Aggregator {
 				String meas = entry.get(ARGPARSE_SELECTION_MEASUREMENT_KEY);
 				String [] fields = entry.get(ARGPARSE_SELECTION_FIELDNAME_KEY).split(FIELD_SEPARATOR);
 				String tagsRemove = entry.getOrDefault(ARGPARSE_SELECTION_TAGSREMOVE_KEY,"");
-				//System.out.println(""+entry);
 				for( String fieldName: fields){
 					Set<String> setTagsRemove = new HashSet<String>();
 					if( tagsRemove != null){
@@ -217,42 +211,18 @@ public class Aggregator {
 		logger.info("max-filter.meas-field: " + maxAllowedFieldMeas);
 		logger.info("max-filter.'tags to remove': " + maxTagsToRemove);
 
-		Map<String,String> kafka_config = config.getkafka_config();
-        Map<String,String> aggregation_config = config.getAggregation_config();
+		// Component configuration section
+		Map<String,String> aggregation_config = config.getAggregation_config();
         String input_topic = aggregation_config.get(AGGREGATION_TOPIC_INPUT_CONFIG);
         String output_topic = aggregation_config.get(AGGREGATION_TOPIC_OUTPUT_CONFIG);
         long window_s = Long.parseLong(aggregation_config.get(AGGREGATION_WINDOW_S_CONFIG));
         long window_ms = window_s * 1000;
-        
         logger.info("aggregation.window.s: " + window_s);
         logger.info("aggregation.topic.input: " + input_topic);
 		logger.info("aggregation.topic.output: " + output_topic);
 
-		Map<String,String> statsConfig = config.getStats_config();
-		
-		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
-        statsType = DEFAULT_STATS_TYPE;
-        statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
-        statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
-        statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
-		logger.info("Stats Enabled?: "+ statsEnabled);
-		
-		if( statsEnabled ) {
-			try {
-				datagramSocket = new DatagramSocket();
-			} catch (SocketException e) {
-				logger.error("Error while creating UDP socket", e);
-			}
-			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
-			logger.info("Stats Endpoint Port: "+statsEndpointPort);
-			logger.info("Stats Period: "+statsPeriodMs+"ms");
-			try {
-				statsAddress = InetAddress.getByName(statsEndpointHostname);
-			} catch (IOException e) {
-				logger.error("Error opening creation address using hostname: "+statsEndpointHostname, e);
-			}
-		}
-		
+		// Kafka configuration section
+		Map<String,String> kafka_config = config.getkafka_config();
 		Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
         props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
@@ -262,6 +232,30 @@ public class Aggregator {
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
+		
+		// Statistics configuration section
+		Map<String,String> statsConfig = config.getStats_config();
+		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
+        logger.info("Stats Enabled?: "+ statsEnabled);
+		if( statsEnabled ) {
+			try {
+				datagramSocket = new DatagramSocket();
+			} catch (SocketException e) {
+				logger.error("Error while creating UDP socket", e);
+			}
+			statsType = DEFAULT_STATS_TYPE;
+        	statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
+        	statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
+        	statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
+			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
+			logger.info("Stats Endpoint Port: "+statsEndpointPort);
+			logger.info("Stats Period: "+statsPeriodMs+"ms");
+			try {
+				statsAddress = InetAddress.getByName(statsEndpointHostname);
+			} catch (IOException e) {
+				logger.error("Error opening creation address using hostname: "+statsEndpointHostname, e);
+			}
+		}
 		
 		final StreamsBuilder builder = new StreamsBuilder();
 		KStream<String, String> input_data = builder.stream(input_topic);
@@ -331,7 +325,6 @@ public class Aggregator {
         	e.printStackTrace();
 		}
 		
-        
         final Topology topology = builder.build();
         logger.info(topology.describe().toString());
         final KafkaStreams streams = new KafkaStreams(topology, props);
