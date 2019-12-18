@@ -51,9 +51,9 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import ch.cern.alice.o2.kafka.utils.KafkaLineProtocol;
-import ch.cern.alice.o2.kafka.utils.YamlImportRecordsConfig;
+import ch.cern.alice.o2.kafka.utils.YamlRouterConfig;
 
-public final class ImportRecords {
+public final class Router {
 	private static Set<String> databaseFilterConfig = null;
 	private static Set<String> onOffFilterConfig    = null;
 	private static Set<String> aggregatorFilterConfig = null;
@@ -75,7 +75,7 @@ public final class ImportRecords {
 	private static String FIELD_SEPARATOR = ",";
 	private static String TAG_SEPARATOR = ",";
 
-	private static Logger logger = LoggerFactory.getLogger(ImportRecords.class); 
+	private static Logger logger = LoggerFactory.getLogger(Router.class); 
     private static String ARGPARSE_CONFIG = "config";
     private static String GENERAL_LOGFILENAME_CONFIG = "log4jfilename";
     private static String TOPICS_INPUT_CONFIG = "topic.input";
@@ -174,7 +174,7 @@ public final class ImportRecords {
         
         /* Parse yaml configuration file */
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        YamlImportRecordsConfig config = mapper.readValue( new File(config_filename), YamlImportRecordsConfig.class);
+        YamlRouterConfig config = mapper.readValue( new File(config_filename), YamlRouterConfig.class);
 		
 		/* Logger configuration */
 		String log4jfilename = config.getGeneral().get(GENERAL_LOGFILENAME_CONFIG);
@@ -203,7 +203,7 @@ public final class ImportRecords {
 		
 		// Filter configuration section
 		databaseFilterConfig = getFilterConfigration(config.getDatabase_filter());
-		onOffFilterConfig    = getFilterConfigration(config.getOnOff_filter());
+		onOffFilterConfig    = getFilterConfigration(config.getOnoff_filter());
 		aggregatorFilterConfig = getFilterConfigration(config.getAggregator_filter());
 		logger.info("databaseFilterConfig.set: " + databaseFilterConfig);
 		logger.info("onOffFilterConfig.set: " + onOffFilterConfig);

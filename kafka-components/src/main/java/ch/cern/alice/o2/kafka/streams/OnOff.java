@@ -84,10 +84,10 @@ public final class OnOff {
 	private static String REFRESH_PERIOD_S_CONFIG = "refresh.period.s";
 
 	/* Process components' name */
-	private static String CHANGELOG_STORE_NAME = "changeLogStore5";
+	private static String CHANGELOG_STORE_NAME = "onOffStore5";
 	private static String SOURCE_PROCESSOR_NAME = "sourceProcessorComponent";
 	//private static String FILTER_PROCESSOR_NAME = "FilterProcessorComponent";
-	private static String CHANGELOG_PROCESSOR_NAME = "ChangeLogProcessorComponent";
+	private static String CHANGELOG_PROCESSOR_NAME = "OnOffProcessorComponent";
 	private static String SINK_PROCESSOR_NAME = "sinkProcessorComponent";
 	
 	/* Stats parameters */
@@ -100,55 +100,11 @@ public final class OnOff {
 
 	private static String DEFAULT_REPLICATION_FACTOR="3";
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
-	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-change-detector2";
-	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-change-detector2";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-onoff2";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-onoff2";
 	private static String DEFAULT_CLIENT_DESCRIPTION = "This tool is used to detect changes in selected metric values.";
 
-	private static String THREAD_NAME = "change-detector-shutdown-hook2";
-
-	/* static class FilterProcessorSupplier implements ProcessorSupplier<String, String> {
-		/*
-		*  Input Record has this format
-		*  String mfKey    = meas#fieldName
-		*  String tvtValue = tags#fieldValue#timestamp
-		*
-		*  ## Variable description:   
-		*  String tags = tagKey1=tagValue1,....,TagKeyN=TagValueN
-		*  String timestamp = <optional>
-		
-		
-		@Override
-		public Processor<String,String> get(){
-			return new Processor<String,String>(){
-				private ProcessorContext context;
-			
-				@Override
-				//@SuppressWarnings("unchecked")
-				public void init( final ProcessorContext context){
-					this.context = context;	
-				}
-				
-				@Override
-				public void process(final String mfKey, final String tvtValue) {
-					receivedRecords++;
-					if( statsEnabled ) {
-						try {
-							stats();
-						} catch (final IOException e) {
-							logger.warn(e.getMessage());
-						}
-					}
-					if( allowedFieldMeas.contains(mfKey)){
-						context.forward(mfKey, tvtValue);
-						filteredRecords++;
-					}
-				}
-	  
-				@Override
-				public void close() {}
-  			};
-		}
-	} */
+	private static String THREAD_NAME = "onoff-shutdown-hook1";
 
 	static String getLineProtocolFromEntryStateStore(final KeyValue<String, String> entry, final long timestamp) throws Exception {
 		/* 
@@ -256,22 +212,12 @@ public final class OnOff {
 		PropertyConfigurator.configure(log4jfilename);
 		
 		final Map<String,String> detector = config.getDetector();
-		final Map<String,String> filterConfig = config.getFilter();
-        final Map<String,String> statsConfig = config.getStats_config();
+		final Map<String,String> statsConfig = config.getStats_config();
 
 		final String input_topic = detector.get(TOPICS_INPUT_CONFIG);
 		final String output_topic = detector.get(TOPICS_OUTPUT_CONFIG);
 		refresh_period_s = Integer.parseInt(detector.get(REFRESH_PERIOD_S_CONFIG));
-		allowedMeas = filterConfig.keySet();
-		for (final Map.Entry<String, String> entry : filterConfig.entrySet()) {
-			final String meas = entry.getKey();
-			final String fields = entry.getValue();
-			final String [] fieldsVett = fields.split(",");
-			for(final String field: fieldsVett){
-				allowedFieldMeas.add(meas+"#"+field);
-			}
-		} 
-		
+				
 		logger.info("detector.topics.input: " + input_topic);
 		logger.info("detector.topics.output: " + output_topic);
 		logger.info("detector.refresh.period.s: " + refresh_period_s);
@@ -279,19 +225,18 @@ public final class OnOff {
 		logger.info("filter.field_measurements: " + allowedFieldMeas);
 
 		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
-        statsType = DEFAULT_STATS_TYPE;
-        statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
-        statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
-        statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
-		logger.info("Stats Enabled?: "+ statsEnabled);
-		
-		try {
-			datagramSocket = new DatagramSocket();
-		} catch (final SocketException e) {
-			logger.error("Error while creating UDP socket", e);
-		}
+        logger.info("Stats Enabled?: "+ statsEnabled);
 		
 		if( statsEnabled ) {
+			try {
+				datagramSocket = new DatagramSocket();
+			} catch (final SocketException e) {
+				logger.error("Error while creating UDP socket", e);
+			}
+			statsType = DEFAULT_STATS_TYPE;
+        	statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
+        	statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
+        	statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
 			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
 			logger.info("Stats Endpoint Port: "+statsEndpointPort);
 			logger.info("Stats Period: "+statsPeriodMs+"ms");
@@ -323,9 +268,6 @@ public final class OnOff {
 
 		// add the source processor node that takes Kafka topic "source-topic" as input
 		builder.addSource(SOURCE_PROCESSOR_NAME, input_topic)
-
-				// add the FilterProcessorSupplier node which takes records from the source processor and filters them
-				//.addProcessor(FILTER_PROCESSOR_NAME,  new FilterProcessorSupplier(), SOURCE_PROCESSOR_NAME)
 
 				// add the changeLogProcessorSupplier node which takes data from filterProcessor node and evaluates changes
 				.addProcessor(CHANGELOG_PROCESSOR_NAME, new OnOffProcessorSupplier(), SOURCE_PROCESSOR_NAME)
@@ -372,7 +314,7 @@ public final class OnOff {
 					final String hostname = InetAddress.getLocalHost().getHostName();
 					if(statsType.equals(STATS_TYPE_INFLUXDB)) {
 						String data2send = "kafka_streams,application_id="+DEFAULT_APPLICATION_ID_CONFIG+",hostname="+hostname;
-						data2send += " receivedRecords="+receivedRecords+"i,filteredRecords="+filteredRecords+"i,sentPeriodicRecords=";
+						data2send += " receivedRecords="+receivedRecords+"i,sentPeriodicRecords=";
 						data2send += sentPeriodicRecords+"i,sentRecords="+sentRecords+"i "+nowMs+"000000";
 						final DatagramPacket packet = new DatagramPacket(data2send.getBytes(), data2send.length(), statsAddress, statsEndpointPort);
 						datagramSocket.send(packet);

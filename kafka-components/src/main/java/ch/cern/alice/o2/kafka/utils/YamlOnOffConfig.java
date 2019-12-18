@@ -6,7 +6,6 @@ public class YamlOnOffConfig{
 		private Map<String,String> general;
 		private Map<String,String> kafka_config;
 		private Map<String,String> detector;
-		private Map<String,String> filter;
 		private Map<String,String> stats_config;
 		
 		public YamlOnOffConfig() { }
@@ -33,14 +32,6 @@ public class YamlOnOffConfig{
 		
 		public void setDetector(Map<String,String> new_det) {
 			detector = new_det;
-		}
-
-		public Map<String,String> getFilter(){
-			return filter;
-		}
-		
-		public void setFilter(Map<String,String> new_filter) {
-			filter = new_filter;
 		}
 
 		public Map<String,String> getStats_config() {
