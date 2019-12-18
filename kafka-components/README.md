@@ -19,7 +19,7 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
 - Java > 1.8
 
 ### Version
-`export VERSION=0.2`
+`export VERSION=0.3`
 
 ### Build
 1. Clone repository
