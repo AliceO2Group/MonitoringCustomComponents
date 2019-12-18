@@ -212,10 +212,6 @@ public final class Router {
 		// Statistics configuration section
 		Map<String,String> statsConfig = config.getStats_config();
 		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
-        statsType = DEFAULT_STATS_TYPE;
-        statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
-        statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
-        statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
 		logger.info("Stats Enabled?: "+ statsEnabled);
 		if( statsEnabled ) {
 			try {
@@ -223,6 +219,10 @@ public final class Router {
 			} catch (SocketException e) {
 				logger.error("Error while creating UDP socket", e);
 			}
+			statsType = DEFAULT_STATS_TYPE;
+			statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
+			statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
+			statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
 			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
 			logger.info("Stats Endpoint Port: "+statsEndpointPort);
 			logger.info("Stats Period: "+statsPeriodMs+"ms");
