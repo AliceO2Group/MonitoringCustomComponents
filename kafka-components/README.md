@@ -4,7 +4,7 @@
 This directory contains [Apache Kafka](https://kafka.apache.org) custom components in order to collect, process, aggregate and consume metrics. 
 
 [Utility components](#utility-components):
-- [Import Records](#import-records-component)
+- [Router](#router)
 
 [Processing components](#processing-components):
 - [On Off](#on-off-component)
@@ -36,7 +36,7 @@ The generated jar (`target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar`)
 ## Utility Components
 In this category belong all components used to allow the processing and consumer components to be executed.
 
-### Router Component
+### Router
 This component is used to route input messages to three branches: messges to be written in the database, messages to be aggregated and messages need changing evaluation. A messages will be forward to a specific branch if its pair `(measurement_name,field_vame) ` belongs to the set of allowed messages related to that branch. All forward messages are written in topics. The input messages must use the [InfluxDB Line Protocol](#influxdb-line-protocol-format) format. The format of messages to be written to the database keep the input format. The messages to be processed (aggregation or on/off detection) are converted in the [internal format](#internal-format). Hence, the <input-topic> and the <database-topic> topics contain InfluxDB Line Protocol format messages, instead <aggr-topic> and <onoff-topic> topics contain messages using the internal format.
 
 #### Run
@@ -103,7 +103,7 @@ Tab. 1
 | *component_config* | *topic.output.aggregator* | Yes | Topic where writes messages using the internal procotol | 
 | * database/onoff/aggregator filter* | - | Yes | Defines the start of 'filter' configuration section | 
 | * database/onoff/aggregator filter * | `<measurement>` | Yes | measurement name to forward toward that branch | 
-| * database/onoff/aggregator filter * | `<field.name>` | Yes | Comma separated fields to use | 
+| * database/onoff/aggregator filter * | `<field.name>` | No | Comma separated fields to use. If the line is not present, all fields will be forwarded. | 
 | *stats* | - | Yes | Defines the start of 'stats' configuration section | 
 | *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
 | *stats*  | *hostname* | No | Endpoint hostname | 
