@@ -224,10 +224,17 @@ public class Aggregator {
 		// Kafka configuration section
 		Map<String,String> kafka_config = config.getkafka_config();
 		Properties props = new Properties();
+		String stateDir = kafka_config.get(StreamsConfig.STATE_DIR_CONFIG);
+		File f = new File("/Path/To/File/or/Directory");
+		if (!(f.exists() && f.isDirectory())) {
+			logger.error("Directory '"+stateDir+"' does not exist. Exit");
+			System.exit(1);
+		}
+
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
         props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
-        props.put(StreamsConfig.STATE_DIR_CONFIG, kafka_config.get(StreamsConfig.STATE_DIR_CONFIG));
+        props.put(StreamsConfig.STATE_DIR_CONFIG, stateDir);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
