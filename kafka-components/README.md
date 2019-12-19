@@ -103,7 +103,7 @@ Tab. 1
 | *component_config* | *topic.output.aggregator* | Yes | Topic where writes messages using the internal procotol | 
 | * database/onoff/aggregator filter* | - | Yes | Defines the start of 'filter' configuration section | 
 | * database/onoff/aggregator filter * | `<measurement>` | Yes | measurement name to forward toward that branch | 
-| * database/onoff/aggregator filter * | `<field.name>` | Yes | Comma separated fields to use | 
+| * database/onoff/aggregator filter * | `<field.name>` | No | Comma separated fields to use. If the line is not present, all fields will be forwarded. | 
 | *stats* | - | Yes | Defines the start of 'stats' configuration section | 
 | *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
 | *stats*  | *hostname* | No | Endpoint hostname | 
