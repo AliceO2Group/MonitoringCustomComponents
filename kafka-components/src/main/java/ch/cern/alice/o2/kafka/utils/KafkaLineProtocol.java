@@ -149,6 +149,16 @@ public class KafkaLineProtocol {
 		}
 	}
 
+	public String getFieldName(){
+		try{
+			this.computeVettMeasFieldname();
+			return this.vettMeasFieldname[1];
+		} catch (Exception e) {
+			logger.warn(e.getMessage());
+			return null;
+		}
+	}
+
 	public String getTimestamp(){
 		try{
 			this.computeVettTagFieldvalueTimestamp();

@@ -43,6 +43,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,9 +55,13 @@ import ch.cern.alice.o2.kafka.utils.KafkaLineProtocol;
 import ch.cern.alice.o2.kafka.utils.YamlRouterConfig;
 
 public final class Router {
-	private static Set<String> databaseFilterConfig = null;
-	private static Set<String> onOffFilterConfig    = null;
-	private static Set<String> aggregatorFilterConfig = null;
+	private static Set<String> sDatabaseFilterConfig = null;
+	private static Set<String> sOnOffFilterConfig    = null;
+	private static Set<String> sAggregatorFilterConfig = null;
+
+	private static Map<String,Set<String>> msDatabaseFilterConfig = null;
+	private static Map<String,Set<String>> msOnOffFilterConfig    = null;
+	private static Map<String,Set<String>> msAggregatorFilterConfig = null;
 
 	private static String statsEndpointHostname = "";
 	private static int statsEndpointPort = 0;
@@ -102,13 +107,10 @@ public final class Router {
 
 	public static List<String> getFilteredDatabaseRecords(String lp){
 		List<String> records = new ArrayList<String>();
-		for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
-			receivedRecords++;
-			String k = klp.getKey();
-			if(databaseFilterConfig.contains(k)){
-				records.add(klp.getLineProtocol());
-				sentDbRecords++;
-			}
+		String meas = lp.split(",")[0];
+		if(msDatabaseFilterConfig.keySet().contains(meas)){
+			records.add(lp);
+			sentDbRecords++;
 		}
 		return records;
 	}
@@ -116,24 +118,40 @@ public final class Router {
 	public static List<KeyValue<String,String>> getFilteredOnOffRecords(String lp){
 		List<KeyValue<String,String>> records = new ArrayList<KeyValue<String,String>>();
 		for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
-			String k = klp.getKey();
-			String v = klp.getValue();
-			if(onOffFilterConfig.contains(k)){
-				records.add( new KeyValue<String,String>(k,v));
-				sentOnOffRecords++;
+			String meas = klp.getMeasurement();
+			if(msOnOffFilterConfig.keySet().contains(meas)){
+				Set<String> sField = msOnOffFilterConfig.get(meas);
+				if(sField == null){
+					records.add( new KeyValue<String,String>(klp.getKey(),klp.getValue()));
+					sentOnOffRecords++;
+				} else {
+					String field = klp.getFieldName();
+					if( sField.contains(field)){
+						records.add( new KeyValue<String,String>(klp.getKey(),klp.getValue()));
+						sentOnOffRecords++;
+					}
+				}
 			}
 		}
 		return records;
 	}
-
+	
 	public static List<KeyValue<String,String>> getFilteredAggregatorRecords(String lp){
 		List<KeyValue<String,String>> records = new ArrayList<KeyValue<String,String>>();
 		for( KafkaLineProtocol klp: new KafkaLineProtocol(lp).getKVsFromLineProtocol()){
-			String k = klp.getKey();
-			String v = klp.getValue();
-			if(aggregatorFilterConfig.contains(k)){
-				records.add( new KeyValue<String,String>(k,v));
-				sentAggrRecords++;
+			String meas = klp.getMeasurement();
+			if(msAggregatorFilterConfig.keySet().contains(meas)){
+				Set<String> sField = msAggregatorFilterConfig.get(meas);
+				if(sField == null){
+					records.add( new KeyValue<String,String>(klp.getKey(),klp.getValue()));
+					sentAggrRecords++;
+				} else {
+					String field = klp.getFieldName();
+					if( sField.contains(field)){
+						records.add( new KeyValue<String,String>(klp.getKey(),klp.getValue()));
+						sentAggrRecords++;
+					}
+				}
 			}
 		}
 		return records;
@@ -143,23 +161,25 @@ public final class Router {
 		return new String(meas + KEY_SEPARATOR + field).trim();
 	}
 
-	public static Set<String> getFilterConfigration( List<Map<String,String>> filterConfig ){
-		Set<String> filterConf = new HashSet<String>();
+	public static Map<String,Set<String>> getFilterConfigration( List<Map<String,String>> filterConfig ){
+		Map<String, Set<String>> filterConf = new HashMap<String, Set<String>>();
 		if( filterConfig == null){
 			return filterConf;
 		}
 		for ( Map<String,String> entry: filterConfig){
-			if( !(entry.containsKey(ARGPARSE_SELECTION_MEASUREMENT_KEY) && (entry.containsKey(ARGPARSE_SELECTION_FIELDNAME_KEY)))){
-				String msg = "Selection section of the configuragion file not well written.";
-				msg += "Miss "+ARGPARSE_SELECTION_MEASUREMENT_KEY+" and/or "+ARGPARSE_SELECTION_FIELDNAME_KEY+ ": "+entry;
+			if( ! entry.containsKey(ARGPARSE_SELECTION_MEASUREMENT_KEY)){
+				String msg = "Configuration file - Filter section not well written. Miss "+ARGPARSE_SELECTION_MEASUREMENT_KEY+" argument: "+entry;
 				logger.error(msg);
-				// Exit due to configuration file not well written
 				System.exit(1);
 			}
 			String meas = entry.get(ARGPARSE_SELECTION_MEASUREMENT_KEY);
-			String [] fields = entry.get(ARGPARSE_SELECTION_FIELDNAME_KEY).split(FIELD_SEPARATOR);
-			for( String fieldName: fields){
-				filterConf.add(generateKey(meas,fieldName));
+			String fields = entry.getOrDefault(ARGPARSE_SELECTION_FIELDNAME_KEY, null);
+			if(fields == null){
+				filterConf.put(meas, null);
+			} else {
+				Set<String> sFields = new HashSet<String>();
+				for(String item: fields.split(",")) sFields.add(item);
+				filterConf.put(meas,sFields);
 			}
 		}
 		return filterConf;
@@ -202,12 +222,12 @@ public final class Router {
 		logger.info("component_config.topics.output.aggregator: " + output_aggregator_topic);
 		
 		// Filter configuration section
-		databaseFilterConfig = getFilterConfigration(config.getDatabase_filter());
-		onOffFilterConfig    = getFilterConfigration(config.getOnoff_filter());
-		aggregatorFilterConfig = getFilterConfigration(config.getAggregator_filter());
-		logger.info("databaseFilterConfig.set: " + databaseFilterConfig);
-		logger.info("onOffFilterConfig.set: " + onOffFilterConfig);
-		logger.info("aggregatorFilterConfig.set: " + aggregatorFilterConfig);
+		msDatabaseFilterConfig = getFilterConfigration(config.getDatabase_filter());
+		msOnOffFilterConfig    = getFilterConfigration(config.getOnoff_filter());
+		msAggregatorFilterConfig = getFilterConfigration(config.getAggregator_filter());
+		logger.info("databaseFilterConfig.set: " + msDatabaseFilterConfig.toString());
+		logger.info("onOffFilterConfig.set: " + msOnOffFilterConfig.toString());
+		logger.info("aggregatorFilterConfig.set: " + msAggregatorFilterConfig.toString());
 
 		// Statistics configuration section
 		Map<String,String> statsConfig = config.getStats_config();
