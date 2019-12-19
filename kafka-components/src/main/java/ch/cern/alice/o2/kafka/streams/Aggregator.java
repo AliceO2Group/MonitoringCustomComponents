@@ -51,7 +51,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Properties;
@@ -78,8 +77,9 @@ public class Aggregator {
 	private static long sentRecords = 0;
 	private static long startMs = 0;
 
-	//private static Set<String> allowedFieldMeas = new HashSet<String>();
-	//private static Map<String,Set<String>> tagsToRemove = new HashMap<String,Set<String>>();
+	private static String KEY_SEPARATOR = "#";
+	private static String FIELD_SEPARATOR = ",";
+	private static String TAG_SEPARATOR = ",";
 
 	/* Aggregator default configuration */
 	private static final long AGGREGATOR_DEFAULT_GRACE_DURATION_S = 10;
@@ -124,20 +124,15 @@ public class Aggregator {
 		*  String timestamp = <optional>
 	*/
 	public static Boolean filterRecords(String mfKey, String tvtValue, Set<String> allowedFieldMeas){
-		//Boolean qwe = allowedFieldMeas.contains(mfKey);
-		//System.out.println("\n\t\t\tFFFF -> key: '"+mfKey+"','"+tvtValue+"' pass?: "+qwe);
-        return allowedFieldMeas.contains(mfKey);
+		return allowedFieldMeas.contains(mfKey);
 	}
 
 	public static List<KeyValue<String, Double>> manageTagsAndValue( String mfKey, String tvtValue, Map<String,Set<String>> tagsToRemove){
 		stats();
-		//System.out.println("\n\t\t\tMMM -> key: '"+mfKey+"','"+tvtValue+"'");
 		List<KeyValue<String, Double>> data = new ArrayList<KeyValue<String, Double>>();
 		KafkaLineProtocol klp = new KafkaLineProtocol(mfKey, tvtValue);
 		klp.removeTags(tagsToRemove.get(mfKey));
-		//System.out.println("\t\t\tMMM -> after removed tags key: '"+klp.getKey()+"','"+klp.getValue()+"'");
 		Double doubleValue = klp.getDoublefieldValue();
-		//System.out.println("\t\t\tMMM -> double value: '"+doubleValue+" and key: "+klp.getMeasTagFieldKey());
 		if( doubleValue != null){
 			KeyValue<String,Double> newKeyValue = new KeyValue<String,Double>(klp.getMeasTagFieldKey(),doubleValue);
 			data.add(newKeyValue);
@@ -146,24 +141,9 @@ public class Aggregator {
 		return data;
 	}
 
-	public static KeyValue<String, String> extractKeyValue(Windowed<String> key, Double value, String op) {
-		String oldKey = key.key();
-		String [] fields = oldKey.split("#");
-		if( fields.length != 2){
-			logger.warn("oldKey: "+oldKey+"  not compliant.");
-			return new KeyValue<String,String>(null, null);
-		}
-		String [] measTags = fields[0].split(",");
-		String measurement = measTags[0];
-		String tags = "";
-		if(measTags.length > 1){
-			tags = String.join(",", Arrays.copyOfRange(measTags, 1, measTags.length));
-		} 
-		String field = fields[1];
-		String timestamp = ""+key.window().end()+"000000";
-		String newKey = measurement+"#"+field+"_"+op;
-		String newValue = tags+"#"+value+"#"+timestamp;
-		return new KeyValue<String,String>(newKey, newValue);
+	public static KeyValue<String,String> getLineProtocol(Windowed<String> key, Double value, String op) {
+		String lp = key.key().replace("#", " ")+"_"+op+"="+value.toString()+" "+key.window().end()+"000000";
+		return new KeyValue<String,String>(key.key(),lp);
 	}
 
 	public static Map<String,Set<String>> getTagToRemove( List<Map<String,String>> filterConfig ){
@@ -177,21 +157,24 @@ public class Aggregator {
 					System.exit(1);
 				}
 				String meas = entry.get(ARGPARSE_SELECTION_MEASUREMENT_KEY);
-				String [] fields = entry.get(ARGPARSE_SELECTION_FIELDNAME_KEY).split(",");
+				String [] fields = entry.get(ARGPARSE_SELECTION_FIELDNAME_KEY).split(FIELD_SEPARATOR);
 				String tagsRemove = entry.getOrDefault(ARGPARSE_SELECTION_TAGSREMOVE_KEY,"");
-				//System.out.println(""+entry);
 				for( String fieldName: fields){
 					Set<String> setTagsRemove = new HashSet<String>();
 					if( tagsRemove != null){
-						for( String tag: tagsRemove.split(",")){ 
+						for( String tag: tagsRemove.split(TAG_SEPARATOR)){ 
 							setTagsRemove.add(tag);
 						}
 					}
-					tagsToRemove.put(meas+"#"+fieldName,setTagsRemove);
+					tagsToRemove.put(generateKey(meas,fieldName),setTagsRemove);
 				}
 			}
 		}
 		return tagsToRemove;
+	}
+
+	public static String generateKey( String meas, String field){
+		return new String(meas + KEY_SEPARATOR + field).trim();
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -228,42 +211,18 @@ public class Aggregator {
 		logger.info("max-filter.meas-field: " + maxAllowedFieldMeas);
 		logger.info("max-filter.'tags to remove': " + maxTagsToRemove);
 
-		Map<String,String> kafka_config = config.getkafka_config();
-        Map<String,String> aggregation_config = config.getAggregation_config();
+		// Component configuration section
+		Map<String,String> aggregation_config = config.getAggregation_config();
         String input_topic = aggregation_config.get(AGGREGATION_TOPIC_INPUT_CONFIG);
         String output_topic = aggregation_config.get(AGGREGATION_TOPIC_OUTPUT_CONFIG);
         long window_s = Long.parseLong(aggregation_config.get(AGGREGATION_WINDOW_S_CONFIG));
         long window_ms = window_s * 1000;
-        
         logger.info("aggregation.window.s: " + window_s);
         logger.info("aggregation.topic.input: " + input_topic);
 		logger.info("aggregation.topic.output: " + output_topic);
 
-		Map<String,String> statsConfig = config.getStats_config();
-		
-		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
-        statsType = DEFAULT_STATS_TYPE;
-        statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
-        statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
-        statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
-		logger.info("Stats Enabled?: "+ statsEnabled);
-		
-		if( statsEnabled ) {
-			try {
-				datagramSocket = new DatagramSocket();
-			} catch (SocketException e) {
-				logger.error("Error while creating UDP socket", e);
-			}
-			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
-			logger.info("Stats Endpoint Port: "+statsEndpointPort);
-			logger.info("Stats Period: "+statsPeriodMs+"ms");
-			try {
-				statsAddress = InetAddress.getByName(statsEndpointHostname);
-			} catch (IOException e) {
-				logger.error("Error opening creation address using hostname: "+statsEndpointHostname, e);
-			}
-		}
-		
+		// Kafka configuration section
+		Map<String,String> kafka_config = config.getkafka_config();
 		Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
         props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
@@ -273,6 +232,30 @@ public class Aggregator {
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
+		
+		// Statistics configuration section
+		Map<String,String> statsConfig = config.getStats_config();
+		statsEnabled = Boolean.valueOf(statsConfig.getOrDefault("enabled", DEFAULT_STATS_ENABLED));
+        logger.info("Stats Enabled?: "+ statsEnabled);
+		if( statsEnabled ) {
+			try {
+				datagramSocket = new DatagramSocket();
+			} catch (SocketException e) {
+				logger.error("Error while creating UDP socket", e);
+			}
+			statsType = DEFAULT_STATS_TYPE;
+        	statsEndpointHostname = statsConfig.getOrDefault("hostname", DEFAULT_STATS_HOSTNAME);
+        	statsEndpointPort = Integer.parseInt(statsConfig.getOrDefault("port", DEFAULT_STATS_PORT));
+        	statsPeriodMs = Integer.parseInt(statsConfig.getOrDefault("period_ms", DEFAULT_STATS_PERIOD));
+			logger.info("Stats Endpoint Hostname: "+statsEndpointHostname);
+			logger.info("Stats Endpoint Port: "+statsEndpointPort);
+			logger.info("Stats Period: "+statsPeriodMs+"ms");
+			try {
+				statsAddress = InetAddress.getByName(statsEndpointHostname);
+			} catch (IOException e) {
+				logger.error("Error opening creation address using hostname: "+statsEndpointHostname, e);
+			}
+		}
 		
 		final StreamsBuilder builder = new StreamsBuilder();
 		KStream<String, String> input_data = builder.stream(input_topic);
@@ -288,7 +271,7 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1.add(v2) )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value.getAverage(),AVG_FUNCTION_NAME)); 
+    				.map((key,value) -> getLineProtocol(key,value.getAverage(),AVG_FUNCTION_NAME)); 
         	avg_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
@@ -296,7 +279,7 @@ public class Aggregator {
 
 		// SUM Function
         try {
-			KStream<String, String> avg_aggr_stream = input_data
+			KStream<String, String> sum_aggr_stream = input_data
 					.filter( (key,value) -> filterRecords(key,value,sumAllowedFieldMeas))
 					.flatMap((key,value) -> manageTagsAndValue(key,value,sumTagsToRemove))
 					.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
@@ -304,15 +287,15 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 + v2 )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value,SUM_FUNCTION_NAME)); 
-        	avg_aggr_stream.to(output_topic);
+    				.map((key,value) -> getLineProtocol(key,value,SUM_FUNCTION_NAME)); 
+        	sum_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
 		}
 
 		// MIN Function
         try {
-			KStream<String, String> avg_aggr_stream = input_data
+			KStream<String, String> min_aggr_stream = input_data
 					.filter( (key,value) -> filterRecords(key,value,minAllowedFieldMeas))
 					.flatMap((key,value) -> manageTagsAndValue(key,value,minTagsToRemove))
 					.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
@@ -320,15 +303,15 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 < v2 ? v1 : v2 )        
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value,MIN_FUNCTION_NAME)); 
-        	avg_aggr_stream.to(output_topic);
+    				.map((key,value) -> getLineProtocol(key,value,MIN_FUNCTION_NAME)); 
+        	min_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
 		}
 
 		// MAX Function
         try {
-			KStream<String, String> avg_aggr_stream = input_data
+			KStream<String, String> max_aggr_stream = input_data
 					.filter( (key,value) -> filterRecords(key,value,maxAllowedFieldMeas))
 					.flatMap((key,value) -> manageTagsAndValue(key,value,maxTagsToRemove))
 					.groupByKey(Grouped.with(Serdes.String(), Serdes.Double()))
@@ -336,13 +319,12 @@ public class Aggregator {
                     .reduce((v1,v2) -> v1 > v2 ? v1 : v2 )
                     .suppress(Suppressed.untilWindowCloses(BufferConfig.unbounded()))
     				.toStream()
-    				.map((key,value) -> extractKeyValue(key,value,MAX_FUNCTION_NAME)); 
-        	avg_aggr_stream.to(output_topic);
+    				.map((key,value) -> getLineProtocol(key,value,MAX_FUNCTION_NAME)); 
+        	max_aggr_stream.to(output_topic);
         } catch (Exception e) {
         	e.printStackTrace();
 		}
 		
-        
         final Topology topology = builder.build();
         logger.info(topology.describe().toString());
         final KafkaStreams streams = new KafkaStreams(topology, props);

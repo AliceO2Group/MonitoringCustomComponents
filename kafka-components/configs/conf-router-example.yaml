@@ -1,0 +1,36 @@
+general:
+   log4jfilename: configs/log4j-router.properties
+
+kafka_config:
+   bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
+
+component_config:
+   topic.input:               <input-topic>
+   topic.output.database:     <output-topic-database>
+   topic.output.onoff:        <output-topic-onoff>
+   topic.output.aggregator:   <output-topic-aggregator>
+
+database_filter:
+   -   measurement: <measurement_name0>
+       field.name: <field_name0>
+   -   measurement: <measurement_name1>
+       field.name: <field_name1>,<field_name2>
+
+onoff_filter:
+   -   measurement: <measurement_name3>
+       field.name: <field_name3>
+   -   measurement: <measurement_name5>
+       field.name: <field_name5>
+
+aggregator_filter:
+   -   measurement: <measurement_name0>
+       field.name: <field_name0>
+   -   measurement: <measurement_name1>
+       field.name: <field_name1>,<field_name2>
+
+stats_config:
+   enabled: true
+   hostname: <infludb-hostname>
+   port: <influxdb-port>
+   period_ms: <sample-period-in-milliseconds>
+

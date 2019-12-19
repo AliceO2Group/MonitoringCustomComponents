@@ -1,5 +1,10 @@
 package ch.cern.alice.o2.kafka.utils;
 
+/**
+ * 
+ */
+
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +43,12 @@ public class KafkaLineProtocol {
 
 	public String getKey(){
 		//if( this.key != null)
-		return this.key;
+		return this.key.trim();
 	} 
 
 	public String getValue(){
 		//if( this.value != null)
-		return this.value;
+		return this.value.trim();
 	}
 
 	public List<KafkaLineProtocol> getKVsFromLineProtocol(){
@@ -79,7 +84,7 @@ public class KafkaLineProtocol {
 				String fieldValue = fieldVett[1];
 				String newKey = meas + "#" + fieldName;
 				String newValue = tags + "#" + fieldValue + "#" + time;
-				lps.add(new KafkaLineProtocol(newKey, newValue));
+				lps.add(new KafkaLineProtocol(newKey.trim(), newValue.trim()));
 			}
 		}
 		return lps;

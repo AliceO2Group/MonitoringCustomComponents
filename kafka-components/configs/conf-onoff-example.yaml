@@ -9,16 +9,6 @@ detector:
    topic.output: <output-topic>
    refresh.period.s: <period-in-seconds>
 
-filter:
-   <measurement_0>: <field_name1>
-   <measurement_1>: <field_name1>
-   <measurement_1>: <field_name3>
-   <measurement_2>: <field_name1>
-   <measurement_2>: <field_name0>
-   <measurement_4>: <field_name0>
-   <measurement_6>: <field_name4>
-   <measurement_3>: <field_name2>
-   
 stats_config:
    enabled: true
    hostname: <infludb-hostname>

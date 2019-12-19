@@ -19,7 +19,7 @@ This directory contains [Apache Kafka](https://kafka.apache.org) custom componen
 - Java > 1.8
 
 ### Version
-`export VERSION=0.2`
+`export VERSION=0.3`
 
 ### Build
 1. Clone repository
@@ -36,40 +36,50 @@ The generated jar (`target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar`)
 ## Utility Components
 In this category belong all components used to allow the processing and consumer components to be executed.
 
-### Import Records Component
-This component converts input messages, using the InfluxDB Line Protocol, in the following internal protocol:
-
-(Input) InfluxDB Line Protocol: `<measurement>,<tags> <field_name1>=<field_value1>,...,<field_nameN>=<field_valueN> <timestamp>`
-(Output) protocol: `(key,value)`
-
-Where:
-- key: `<measurement_name>#<field_name>`
-- value: `<tags>#<field_value>#<timestamp>`
-
-Both, key and value, are strings.
-The component is able to splits messagges containg multiple values in single value messages. 
+### Router Component
+This component is used to route input messages to three branches: messges to be written in the database, messages to be aggregated and messages need changing evaluation. A messages will be forward to a specific branch if its pair `(measurement_name,field_vame) ` belongs to the set of allowed messages related to that branch. All forward messages are written in topics. The input messages must use the [InfluxDB Line Protocol](#influxdb-line-protocol-format) format. The format of messages to be written to the database keep the input format. The messages to be processed (aggregation or on/off detection) are converted in the [internal format](#internal-format). Hence, the <input-topic> and the <database-topic> topics contain InfluxDB Line Protocol format messages, instead <aggr-topic> and <onoff-topic> topics contain messages using the internal format.
 
 #### Run
 The consumer can be started using the following command:
 
 ```
 java -cp target/kafka-streams-o2-$VERSION-jar-with-dependencies.jar \
- ch.cern.alice.o2.kafka.streams.ImportRecords \
- --config configs/conf-import-records.yaml
+ ch.cern.alice.o2.kafka.streams.Router \
+ --config configs/conf-router.yaml
 ```
 #### Configuration file 
 A configuration file example is:
 
 ```
 general:
-   log4jfilename: configs/log4j-import-records.properties
+   log4jfilename: configs/log4j-router.properties
 
 kafka_config:
    bootstrap.servers: <broker1:9092,broker2:9092,broker3:9092>
 
-import_config:
+component_config:
    topic.input: <input-topic>
-   topic.output: <output-topic>
+   topic.output.database: <database-topic>
+   topic.output.onoff: <onoff-topic>
+   topic.output.aggregator: <aggr-topic>
+
+database_filter:
+   -   measurement: <measurement_name0>
+       field.name: <field_name0>
+   -   measurement: <measurement_name1>
+       field.name: <field_name1>,<field_name2>
+
+onoff_filter:
+   -   measurement: <measurement_name3>
+       field.name: <field_name3>
+   -   measurement: <measurement_name5>
+       field.name: <field_name5>
+
+aggregator_filter:
+   -   measurement: <measurement_name0>
+       field.name: <field_name0>
+   -   measurement: <measurement_name1>
+       field.name: <field_name1>,<field_name2>
 
 stats_config:
    enabled: true
@@ -86,9 +96,14 @@ Tab. 1
 | *general* | *log4jfilename* | Yes | Log configuration filename | - |
 | *kafka_config* | - | Yes | Defines the start of 'kafka_config' configuration section | - |
 | *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
-| *import_config* | - | Yes | Defines the start of 'import_config' configuration section | 
-| *import_config* | *topic.input* | Yes | Topic where reads InfluxDB Line Protocol messages | 
-| *import_config* | *topic.output* | Yes | Topic where writes messages using the internal procotol | 
+| *component_config* | - | Yes | Defines the start of 'component_config' configuration section | 
+| *component_config* | *topic.input* | Yes | Topic where reads InfluxDB Line Protocol messages | 
+| *component_config* | *topic.output.database* | Yes | Topic where writes messages using the InfluxDB Line Protocol format | 
+| *component_config* | *topic.output.onoff* | Yes | Topic where writes messages using the internal procotol | 
+| *component_config* | *topic.output.aggregator* | Yes | Topic where writes messages using the internal procotol | 
+| * database/onoff/aggregator filter* | - | Yes | Defines the start of 'filter' configuration section | 
+| * database/onoff/aggregator filter * | `<measurement>` | Yes | measurement name to forward toward that branch | 
+| * database/onoff/aggregator filter * | `<field.name>` | Yes | Comma separated fields to use | 
 | *stats* | - | Yes | Defines the start of 'stats' configuration section | 
 | *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
 | *stats*  | *hostname* | No | Endpoint hostname | 
@@ -100,7 +115,7 @@ Kafka components able to extract aggregated values starting from raw data.
 
 ### On Off Component
 This component extracts messages whose value is changed respect the last stored value and forwards them to an output topic. Moreover, periodically it sends all stored values to the output topic. The component provides the possibility to select the pair `(measurement,field_name)` where apply the change detector.
-The component is able to read only internal format messages generated using the [Import Records](#import-records-component).
+The component is able to read only [internal format](#internal-format) messages generated using the [Route component](#route-component).
 
 #### Run
 The consumer can be started using the following command:
@@ -125,16 +140,6 @@ detector:
    topic.output: <output-topic>
    refresh.period.s: <period-in-seconds>
 
-filter:
-   <measurement_0>: <field_name1>
-   <measurement_1>: <field_name1>
-   <measurement_1>: <field_name3>
-   <measurement_2>: <field_name1>
-   <measurement_2>: <field_name0>
-   <measurement_4>: <field_name0>
-   <measurement_6>: <field_name4>
-   <measurement_3>: <field_name2>
-   
 stats_config:
    enabled: true
    hostname: <infludb-hostname>
@@ -154,8 +159,6 @@ Tab. 2
 | *detector* | *topic.input* | Yes | Topic where to read messages | 
 | *detector* | *topic.output* | Yes | Topic where to write detected messages | 
 | *detector* | *refresh.period.s* | No | Period, in seconds, used from the periodical sender to forward stored values to the output topic | 
-| * filter* | - | Yes | Defines the start of 'filter' configuration section | 
-| * filter* | `<measurement_name>:<field_name>` | Yes | Pair `(measurement,field_name)` where apply the on off component | 
 | *stats* | - | Yes | Defines the start of 'stats' configuration section | 
 | *stats* | *enabled* | Yes | Set `true` to enable the self-monitoring functionality | 
 | *stats*  | *hostname* | No | Endpoint hostname | 
@@ -169,7 +172,7 @@ The aggregation component processes input messages using the following four func
 - minimum
 - maximum
 
-The component is able to read only internal format messages generated using the [Import Records](#import-records-component) and considers only numberic fields.
+The component is able to read only [internal format](#internal-format) messages generated using the [Route component](#route-component). Only numberic fields are considered.
 
 #### Command
 The aggregation component can be started using the following commands:
@@ -260,8 +263,8 @@ Tab. 4
 Each consumer component retrieves messages from the Kafka cluster and forwards them to a specific external component.
 
 ### InfluxDB UDP Consumer
-This component retrieves messages from the Kafka cluster and forward them to an InfluxDB instance. 
-The messages need to be formatted in the [Line Protocol format](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
+This component retrieves messages from the Kafka cluster and forward them to an InfluxDB instance via UDP.
+The messages need to be formatted in the [InfluxDB Line Protocol format](#influxdb-line-protocol-format).
 The component could be configured in order to send inner monitoring data to an InfluxDB instance.
 
 #### Run
@@ -459,3 +462,22 @@ Tab. 7
 | *stats*  | *hostname* | No | Endpoint hostname | 
 | *stats*  | *port*   | No | Endpoint port |
 | *stats*  | *period_ms* | No | Statistic report period |
+
+## Message Format
+
+### InfluxDB Line Protocol Format
+InfluxDB Line Protocol format: 
+`<measurement>,<tags> <field_name1>=<field_value1>,...,<field_nameN>=<field_valueN> <timestamp>`
+
+[Official reference page](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_reference/).
+
+### Internal Format
+Internal format: 
+`(key,value)`
+
+Where:
+- key: `<measurement_name>#<field_name>`
+- value: `<tags>#<field_value>#<timestamp>`
+
+Both, key and value, are strings.
+The component is able to splits messagges containg multiple values in single value messages. 
