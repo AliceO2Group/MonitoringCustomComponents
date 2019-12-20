@@ -99,11 +99,11 @@ public final class Router {
 	private static final String DEFAULT_STATS_PORT = "8090";
 
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
-	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-import-records";
-	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-import-records";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-router";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-router";
 	private static String DEFAULT_CLIENT_DESCRIPTION = "This tool is used to import records and convert them in the kafka protocol.";
 
-	private static String THREAD_NAME = "import-records-shutdown-hook";
+	private static String THREAD_NAME = "router-shutdown-hook";
 
 	public static List<String> getFilteredDatabaseRecords(String lp){
 		List<String> records = new ArrayList<String>();
