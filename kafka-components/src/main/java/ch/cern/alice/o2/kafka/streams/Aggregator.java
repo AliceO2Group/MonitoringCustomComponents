@@ -231,14 +231,14 @@ public class Aggregator {
 			System.exit(1);
 		}
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.APPLICATION_ID_CONFIG ,DEFAULT_APPLICATION_ID_CONFIG));
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG));
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(StreamsConfig.STATE_DIR_CONFIG, stateDir);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, window_ms);
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, kafka_config.getOrDefault(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG));
 		
 		// Statistics configuration section
 		Map<String,String> statsConfig = config.getStats_config();
