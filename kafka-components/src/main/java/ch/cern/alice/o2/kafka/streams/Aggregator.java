@@ -232,7 +232,7 @@ public class Aggregator {
 		}
 
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.APPLICATION_ID_CONFIG ,DEFAULT_APPLICATION_ID_CONFIG));
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG));
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG));
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(StreamsConfig.STATE_DIR_CONFIG, stateDir);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());

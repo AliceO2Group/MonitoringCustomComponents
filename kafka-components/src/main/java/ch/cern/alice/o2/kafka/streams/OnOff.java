@@ -251,7 +251,7 @@ public final class OnOff {
 		final Properties props = new Properties();
 		props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, kafka_config.getOrDefault(StreamsConfig.REPLICATION_FACTOR_CONFIG, DEFAULT_REPLICATION_FACTOR));
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.APPLICATION_ID_CONFIG ,DEFAULT_APPLICATION_ID_CONFIG));
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG));
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG));
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
