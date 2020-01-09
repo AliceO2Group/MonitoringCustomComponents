@@ -104,8 +104,8 @@ public class Aggregator {
     private static String AGGREGATION_TOPIC_OUTPUT_CONFIG = "topic.output";
 
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
-	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-aggregator";
-	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-aggregator-client";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-aggregator";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-aggregator";
     private static String DEFAULT_CLIENT_DESCRIPTION = "This tool is used to aggregate using the avg/sum/min/max functions.";
     
 	private static String THREAD_NAME = "aggregator-aggr-shutdown-hook";

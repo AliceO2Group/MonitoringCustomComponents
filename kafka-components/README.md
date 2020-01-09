@@ -97,8 +97,8 @@ Tab. 1
 | *kafka_config* | - | Yes | Defines the start of 'kafka_config' configuration section | - |
 | *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
 | *kafka_config* | *num.stream.threads* | No | The number of threads to execute stream processing | `1` |
-| *kafka_config* | *application.id* | No | An identifier for the stream processing application. Must be unique within the Kafka cluster | `streams-client-onoff` |
-| *kafka_config* | *client.id* | No | An ID prefix string used for the client IDs of internal consumer, producer and restore-consumer | `streams-app-onoff` |
+| *kafka_config* | *application.id* | No | An identifier for the stream processing application. Must be unique within the Kafka cluster | `streams-app-router` |
+| *kafka_config* | *client.id* | No | An ID prefix string used for the client IDs of internal consumer, producer and restore-consumer | `streams-client-router` |
 | *component_config* | - | Yes | Defines the start of 'component_config' configuration section | 
 | *component_config* | *topic.input* | Yes | Topic where reads InfluxDB Line Protocol messages | 
 | *component_config* | *topic.output.database* | Yes | Topic where writes messages using the InfluxDB Line Protocol format | 
@@ -160,8 +160,8 @@ Tab. 2
 | *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
 | *kafka_config* | *replication.factor* | No | The replication factor for change log topics and repartition topics created by the stream processing application | `3` |
 | *kafka_config* | *num.stream.threads* | No | The number of threads to execute stream processing | `1` |
-| *kafka_config* | *application.id* | No | An identifier for the stream processing application. Must be unique within the Kafka cluster | `streams-client-onoff` |
-| *kafka_config* | *client.id* | No | An ID prefix string used for the client IDs of internal consumer, producer and restore-consumer | `streams-app-onoff` |
+| *kafka_config* | *application.id* | No | An identifier for the stream processing application. Must be unique within the Kafka cluster | `streams-app-onoff` |
+| *kafka_config* | *client.id* | No | An ID prefix string used for the client IDs of internal consumer, producer and restore-consumer | `streams-client-onoff` |
 | *detector* | - | Yes | Defines the start of 'detector' configuration section | 
 | *detector* | *topic.input* | Yes | Topic where to read messages | 
 | *detector* | *topic.output* | Yes | Topic where to write detected messages | 
@@ -252,8 +252,8 @@ Tab. 4
 | *kafka_config* | *bootstrap.servers* | Yes | Comma separated list of the Kafka cluster brokers | - |
 | *kafka_config* | *state.dir* | Yes | Directory where store the aggregation status | - |
 | *kafka_config* | *num.stream.threads* | No | The number of threads to execute stream processing | `1` |
-| *kafka_config* | *application.id* | No | An identifier for the stream processing application. Must be unique within the Kafka cluster | `streams-client-onoff` |
-| *kafka_config* | *client.id* | No | An ID prefix string used for the client IDs of internal consumer, producer and restore-consumer | `streams-app-onoff` |
+| *kafka_config* | *application.id* | No | An identifier for the stream processing application. Must be unique within the Kafka cluster | `streams-app-aggregator` |
+| *kafka_config* | *client.id* | No | An ID prefix string used for the client IDs of internal consumer, producer and restore-consumer | `streams-client-aggregator` |
 | *aggregation_config* | - | Yes | Defines the start of 'aggregation_config' configuration section | 
 | *aggregation_config* | *window_s* | Yes | Window time in seconds | 
 | *aggregation_config*  | *topic.input* | Yes | Topic where retrieve messages | 
