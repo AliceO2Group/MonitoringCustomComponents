@@ -99,8 +99,8 @@ public final class OnOff {
 
 	private static String DEFAULT_REPLICATION_FACTOR="3";
 	private static String DEFAULT_NUM_STREAM_THREADS_CONFIG = "1";
-	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-onoff2";
-	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-onoff2";
+	private static String DEFAULT_APPLICATION_ID_CONFIG = "streams-app-onoff";
+	private static String DEFAULT_CLIENT_ID_CONFIG = "streams-client-onoff";
 	private static String DEFAULT_CLIENT_DESCRIPTION = "This tool is used to detect changes in selected metric values.";
 
 	private static String THREAD_NAME = "onoff-shutdown-hook1";
@@ -249,13 +249,13 @@ public final class OnOff {
 		// Kafka configuration section
 		final Map<String,String> kafka_config = config.getKafka_config();
 		final Properties props = new Properties();
-		props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, DEFAULT_REPLICATION_FACTOR);
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, DEFAULT_APPLICATION_ID_CONFIG);
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG);
+		props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, kafka_config.getOrDefault(StreamsConfig.REPLICATION_FACTOR_CONFIG, DEFAULT_REPLICATION_FACTOR));
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.APPLICATION_ID_CONFIG ,DEFAULT_APPLICATION_ID_CONFIG));
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, kafka_config.getOrDefault(StreamsConfig.CLIENT_ID_CONFIG, DEFAULT_CLIENT_ID_CONFIG));
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafka_config.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG);
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, kafka_config.getOrDefault(StreamsConfig.NUM_STREAM_THREADS_CONFIG, DEFAULT_NUM_STREAM_THREADS_CONFIG));
 		
 		final StoreBuilder<KeyValueStore<String, String>> kvStore = Stores.keyValueStoreBuilder(
 			//Stores.persistentKeyValueStore(CHANGELOG_STORE_NAME),
